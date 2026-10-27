@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/StarrySky.App/StarrySky.App.csproj">
+      <Platform Project="x64" />
+    </Project>
     <Project Path="src/StarrySky.Core/StarrySky.Core.csproj" />
     <Project Path="src/StarrySky.Render/StarrySky.Render.csproj" />
   </Folder>

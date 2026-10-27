@@ -88,7 +88,8 @@
                     x:Name="OutlinerList"
                     Grid.Row="0"
                     Margin="8,36,8,8"
-                    SelectionChanged="OnOutlinerSelectionChanged">
+                    SelectionChanged="OnOutlinerSelectionChanged"
+                    KeyDown="OnOutlinerKeyDown">
                     <ListView.ContextFlyout>
                         <MenuFlyout>
                             <MenuFlyoutItem Text="复制" Click="OnDuplicate" />

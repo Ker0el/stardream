@@ -435,6 +435,15 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OnOutlinerKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Delete)
+        {
+            e.Handled = true;
+            OnDelete(sender, new RoutedEventArgs());
+        }
+    }
+
     private void OnToggleVisibleFromOutliner(object sender, RoutedEventArgs e)
     {
         if (Selected is null)

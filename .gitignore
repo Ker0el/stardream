@@ -1,0 +1,9 @@
+﻿bin/
+obj/
+.vs/
+*.user
+TestResults/
+native/bin/
+publish/
+artifacts/
+.superpowers/

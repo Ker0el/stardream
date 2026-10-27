@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using StarrySky.Core.Editing;
 using StarrySky.Core.Math;
 using StarrySky.Core.Meshes;
 using StarrySky.Core.Scene;
@@ -96,8 +97,11 @@ public static class FbxExporter
         var indices = new int[corners];
         var normals = new FbxNative.Vec3[corners];
         var uvs = new FbxNative.Vec2[corners];
+        var smoothing = new int[mesh.Triangles.Count];
 
+        var groups = ComputeSmoothingGroups(mesh);
         var write = 0;
+        var triangle = 0;
         for (var f = 0; f < mesh.Faces.Count; f++)
         {
             var face = mesh.Faces[f];
@@ -109,6 +113,7 @@ public static class FbxExporter
                 AppendCorner(mesh, face[0], offset + 0, normal, indices, normals, uvs, ref write);
                 AppendCorner(mesh, face[i], offset + i, normal, indices, normals, uvs, ref write);
                 AppendCorner(mesh, face[i + 1], offset + i + 1, normal, indices, normals, uvs, ref write);
+                smoothing[triangle++] = groups[f];
             }
         }
 
@@ -123,6 +128,16 @@ public static class FbxExporter
         FbxNative.ufbxw_mesh_set_normals(scene, fbxMesh, normalBuffer, FbxNative.MappingPolygonVertex);
         FbxNative.ufbxw_mesh_set_uvs(scene, fbxMesh, 0, uvBuffer, FbxNative.MappingPolygonVertex);
         FbxNative.ufbxw_mesh_set_single_material(scene, fbxMesh, 0);
+
+        var smoothingBuffer = ViewBuffer(scene, smoothing, pinned, FbxNative.ufbxw_view_int_array);
+        var attribute = new FbxNative.AttributeDesc
+        {
+            Mapping = FbxNative.MappingPolygon,
+            Values = smoothingBuffer.Value,
+        };
+        FbxNative.ufbxw_mesh_set_attribute(
+            scene, fbxMesh, FbxNative.MeshAttributeSmoothing, 0, ref attribute);
+
         FbxNative.ufbxw_mesh_add_instance(scene, fbxMesh, node);
 
         var color = obj.Color;
@@ -135,6 +150,74 @@ public static class FbxExporter
             Z = color.Z,
         });
         FbxNative.ufbxw_node_set_material(scene, node, UIntPtr.Zero, material);
+    }
+
+    /// <summary>
+    /// Smoothing group per face, derived from the same 30° rule the viewport uses.
+    /// Faces joined by an edge under the threshold share an id; ids start at 1
+    /// because 0 means "no smoothing group" in FBX.
+    /// </summary>
+    private static int[] ComputeSmoothingGroups(Mesh mesh)
+    {
+        var parent = new int[mesh.Faces.Count];
+        for (var i = 0; i < parent.Length; i++)
+        {
+            parent[i] = i;
+        }
+
+        var threshold = MathF.Cos(NormalSmoother.SmoothAngleDegrees * MathUtil.DegToRad);
+
+        foreach (var edge in mesh.Edges)
+        {
+            var faces = MeshQueries.FacesOfEdge(mesh, edge);
+            for (var i = 0; i < faces.Count; i++)
+            {
+                for (var j = i + 1; j < faces.Count; j++)
+                {
+                    if (Vec3.Dot(mesh.FaceNormals[faces[i]], mesh.FaceNormals[faces[j]]) >= threshold)
+                    {
+                        Union(faces[i], faces[j]);
+                    }
+                }
+            }
+        }
+
+        var ids = new Dictionary<int, int>();
+        var result = new int[mesh.Faces.Count];
+        for (var f = 0; f < result.Length; f++)
+        {
+            var root = Find(f);
+            if (!ids.TryGetValue(root, out var id))
+            {
+                id = ids.Count + 1;
+                ids[root] = id;
+            }
+
+            result[f] = id;
+        }
+
+        return result;
+
+        int Find(int x)
+        {
+            while (parent[x] != x)
+            {
+                parent[x] = parent[parent[x]];
+                x = parent[x];
+            }
+
+            return x;
+        }
+
+        void Union(int a, int b)
+        {
+            var rootA = Find(a);
+            var rootB = Find(b);
+            if (rootA != rootB)
+            {
+                parent[rootB] = rootA;
+            }
+        }
     }
 
     private delegate FbxNative.Id ViewBufferFunc(IntPtr scene, IntPtr data, UIntPtr count);

@@ -121,6 +121,31 @@ internal static class FbxNative
     [DllImport(Dll, ExactSpelling = true)]
     internal static extern void ufbxw_mesh_set_single_material(IntPtr scene, Id mesh, int materialIndex);
 
+    /// <summary>ufbxw_mesh_attribute::UFBXW_MESH_ATTRIBUTE_SMOOTHING.</summary>
+    internal const int MeshAttributeSmoothing = 6;
+
+    /// <summary>ufbxw_attribute_mapping::UFBXW_ATTRIBUTE_MAPPING_POLYGON.</summary>
+    internal const int MappingPolygon = 4;
+
+    /// <summary>Mirrors ufbxw_mesh_attribute_desc; layout is asserted by offset order.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct AttributeDesc
+    {
+        public uint BeginZero;
+        public int Mapping;
+        public ulong Values;
+        public ulong Indices;
+        public IntPtr NameData;
+        public UIntPtr NameLength;
+        public ulong ValuesW;
+        [MarshalAs(UnmanagedType.I1)] public bool GenerateIndices;
+        public uint EndZero;
+    }
+
+    [DllImport(Dll, ExactSpelling = true)]
+    internal static extern void ufbxw_mesh_set_attribute(
+        IntPtr scene, Id mesh, int attribute, int set, ref AttributeDesc desc);
+
     [DllImport(Dll, ExactSpelling = true)]
     internal static extern void ufbxw_prepare_scene(IntPtr scene, IntPtr opts);
 

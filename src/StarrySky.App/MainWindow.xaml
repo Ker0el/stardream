@@ -8,18 +8,27 @@
     <Grid>
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="F8" Invoked="OnToggleEditMode" />
+            <KeyboardAccelerator Key="F9" Invoked="OnVertexMode" />
+            <KeyboardAccelerator Key="F10" Invoked="OnEdgeMode" />
+            <KeyboardAccelerator Key="F11" Invoked="OnFaceMode" />
             <KeyboardAccelerator Key="Q" Invoked="OnSelectTool" />
             <KeyboardAccelerator Key="W" Invoked="OnTranslateTool" />
             <KeyboardAccelerator Key="E" Invoked="OnRotateTool" />
             <KeyboardAccelerator Key="R" Invoked="OnScaleTool" />
-            <KeyboardAccelerator Key="F9" Invoked="OnVertexMode" />
-            <KeyboardAccelerator Key="F10" Invoked="OnEdgeMode" />
-            <KeyboardAccelerator Key="F11" Invoked="OnFaceMode" />
-            <KeyboardAccelerator Key="Delete" Invoked="OnDeleteKey" />
-            <KeyboardAccelerator Key="E" Modifiers="Control" Invoked="OnExtrudeKey" />
-            <KeyboardAccelerator Key="D" Modifiers="Control" Invoked="OnDuplicateKey" />
             <KeyboardAccelerator Key="F" Invoked="OnFrameSelected" />
+            <KeyboardAccelerator Key="Delete" Invoked="OnDeleteKey" />
+            <KeyboardAccelerator Key="D" Modifiers="Control" Invoked="OnDuplicateKey" />
+            <KeyboardAccelerator Key="E" Modifiers="Control" Invoked="OnExtrudeKey" />
+            <KeyboardAccelerator Key="X" Modifiers="Control" Invoked="OnCutKey" />
+            <KeyboardAccelerator Key="C" Modifiers="Control" Invoked="OnCopyKey" />
+            <KeyboardAccelerator Key="V" Modifiers="Control" Invoked="OnPasteKey" />
+            <KeyboardAccelerator Key="Z" Modifiers="Control" Invoked="OnUndoKey" />
+            <KeyboardAccelerator Key="Y" Modifiers="Control" Invoked="OnRedoKey" />
+            <KeyboardAccelerator Key="N" Modifiers="Control" Invoked="OnNewKey" />
+            <KeyboardAccelerator Key="O" Modifiers="Control" Invoked="OnOpenKey" />
+            <KeyboardAccelerator Key="S" Modifiers="Control" Invoked="OnSaveKey" />
         </Grid.KeyboardAccelerators>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -28,32 +37,19 @@
 
         <MenuBar Grid.Row="0">
             <MenuBarItem Title="文件">
-                <MenuFlyoutItem Text="新建" Click="OnNewScene">
-                    <MenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="N" Modifiers="Control" />
-                    </MenuFlyoutItem.KeyboardAccelerators>
-                </MenuFlyoutItem>
+                <MenuFlyoutItem Text="新建" Click="OnNewScene" />
                 <MenuFlyoutItem Text="打开…" Click="OnOpenScene" />
                 <MenuFlyoutItem Text="保存" Click="OnSaveScene" />
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="导出 FBX…" Click="OnExportFbx" />
             </MenuBarItem>
             <MenuBarItem Title="编辑">
-                <MenuFlyoutItem Text="剪切" Click="OnCut">
-                    <MenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="X" Modifiers="Control" />
-                    </MenuFlyoutItem.KeyboardAccelerators>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="复制" Click="OnCopy">
-                    <MenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="C" Modifiers="Control" />
-                    </MenuFlyoutItem.KeyboardAccelerators>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="粘贴" Click="OnPaste">
-                    <MenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="V" Modifiers="Control" />
-                    </MenuFlyoutItem.KeyboardAccelerators>
-                </MenuFlyoutItem>
+                <MenuFlyoutItem Text="撤销" Click="OnUndo" />
+                <MenuFlyoutItem Text="重做" Click="OnRedo" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="剪切" Click="OnCut" />
+                <MenuFlyoutItem Text="复制" Click="OnCopy" />
+                <MenuFlyoutItem Text="粘贴" Click="OnPaste" />
                 <MenuFlyoutItem Text="再制一份" Click="OnDuplicate" />
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="删除" Click="OnDelete" />
@@ -104,17 +100,8 @@
                     x:Name="OutlinerList"
                     Grid.Row="0"
                     Margin="8,36,8,8"
-                    SelectionChanged="OnOutlinerSelectionChanged"
-                    KeyDown="OnOutlinerKeyDown">
-                    <ListView.ContextFlyout>
-                        <MenuFlyout>
-                            <MenuFlyoutItem Text="复制" Click="OnDuplicate" />
-                            <MenuFlyoutItem Text="隐藏 / 显示" Click="OnToggleVisibleFromOutliner" />
-                            <MenuFlyoutSeparator />
-                            <MenuFlyoutItem Text="删除" Click="OnDelete" />
-                        </MenuFlyout>
-                    </ListView.ContextFlyout>
-                </ListView>
+                    KeyDown="OnOutlinerKeyDown"
+                    SelectionChanged="OnOutlinerSelectionChanged" />
 
                 <Rectangle
                     Grid.Row="1"

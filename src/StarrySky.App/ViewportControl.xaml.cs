@@ -47,6 +47,9 @@ public sealed partial class ViewportControl : UserControl
     public GizmoMode GizmoMode { get; set; } = GizmoMode.Translate;
     public bool GizmoVisible { get; set; } = true;
 
+    /// <summary>Raised just before a gizmo drag starts changing the scene, so the host can snapshot it.</summary>
+    public event Action? BeforeMutation;
+
     public SceneDocument Document { get; } = new();
     public OrbitCamera Camera => Document.Camera;
     public EditState Edit { get; } = new();
@@ -198,6 +201,7 @@ public sealed partial class ViewportControl : UserControl
 
         var ray = Camera.ScreenToRay(screen, width, height);
         var viewDirection = (Camera.Target - Camera.Eye).Normalized();
+        BeforeMutation?.Invoke();
         _gizmoDrag = GizmoDrag.Begin(Document.Selected, GizmoMode, axis.Value, ray, viewDirection, scale);
         return _gizmoDrag is not null;
     }

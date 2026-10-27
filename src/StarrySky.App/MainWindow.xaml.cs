@@ -18,6 +18,73 @@ public sealed partial class MainWindow : Window
     private bool _syncing;
     private bool _recoveryChecked;
     private SceneObject? _clipboard;
+
+    private const int UndoLimit = 64;
+    private readonly List<string> _undo = new();
+    private readonly List<string> _redo = new();
+    private string _lastUndoTag = string.Empty;
+    private DateTime _lastUndoAt = DateTime.MinValue;
+
+    /// <summary>Snapshots the scene before a mutation. Repeated edits of the same kind within
+    /// a second collapse into one entry so dragging a number box does not flood the stack.</summary>
+    private void PushUndo(string tag)
+    {
+        var now = DateTime.UtcNow;
+        if (tag == _lastUndoTag && (now - _lastUndoAt).TotalMilliseconds < 800)
+        {
+            return;
+        }
+
+        _lastUndoTag = tag;
+        _lastUndoAt = now;
+        _undo.Add(SceneSerializer.Save(Document));
+        if (_undo.Count > UndoLimit)
+        {
+            _undo.RemoveAt(0);
+        }
+
+        _redo.Clear();
+    }
+
+    private void OnUndo(object sender, RoutedEventArgs e)
+    {
+        if (_undo.Count == 0)
+        {
+            StatusText.Text = "没有可撤销的操作";
+            return;
+        }
+
+        _redo.Add(SceneSerializer.Save(Document));
+        var json = _undo[^1];
+        _undo.RemoveAt(_undo.Count - 1);
+
+        SceneSerializer.LoadInto(Document, json);
+        Document.IsDirty = true;
+        RefreshOutliner();
+        RefreshProperties();
+        UpdateStatus();
+        StatusText.Text = "已撤销";
+    }
+
+    private void OnRedo(object sender, RoutedEventArgs e)
+    {
+        if (_redo.Count == 0)
+        {
+            StatusText.Text = "没有可重做的操作";
+            return;
+        }
+
+        _undo.Add(SceneSerializer.Save(Document));
+        var json = _redo[^1];
+        _redo.RemoveAt(_redo.Count - 1);
+
+        SceneSerializer.LoadInto(Document, json);
+        Document.IsDirty = true;
+        RefreshOutliner();
+        RefreshProperties();
+        UpdateStatus();
+        StatusText.Text = "已重做";
+    }
     private readonly DispatcherTimer _autoSaveTimer = new() { Interval = TimeSpan.FromSeconds(30) };
 
     private static string AutoSavePath => Path.Combine(
@@ -31,10 +98,27 @@ public sealed partial class MainWindow : Window
         SystemBackdrop = new DesktopAcrylicBackdrop();
         LoadDemoScene();
         ViewportHost.Document.SelectionChanged += OnSelectionChanged;
+        ViewportHost.BeforeMutation += () => PushUndo("gizmo");
 
         _autoSaveTimer.Tick += OnAutoSaveTick;
         _autoSaveTimer.Start();
-        Activated += OnFirstActivated;
+
+        // The recovery dialog needs a live XamlRoot, which only exists once the
+        // window content is loaded; asking earlier throws E_INVALIDARG.
+        if (Content is FrameworkElement root)
+        {
+            root.Loaded += OnRootLoaded;
+        }
+    }
+
+    private void OnRootLoaded(object sender, RoutedEventArgs e)
+    {
+        if (Content is FrameworkElement root)
+        {
+            root.Loaded -= OnRootLoaded;
+        }
+
+        _ = CheckForRecoveredDraftAsync();
     }
 
     private void OnAutoSaveTick(object? sender, object e)
@@ -55,7 +139,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async void OnFirstActivated(object sender, WindowActivatedEventArgs args)
+    private async System.Threading.Tasks.Task CheckForRecoveredDraftAsync()
     {
         if (_recoveryChecked)
         {
@@ -63,7 +147,6 @@ public sealed partial class MainWindow : Window
         }
 
         _recoveryChecked = true;
-        Activated -= OnFirstActivated;
 
         if (!File.Exists(AutoSavePath))
         {
@@ -274,6 +357,7 @@ public sealed partial class MainWindow : Window
         }
 
         var obj = Selected;
+        PushUndo("transform");
         obj.Position = new Vec3((float)PosX.Value, (float)PosY.Value, (float)PosZ.Value);
         obj.Rotation = new Vec3((float)RotX.Value, (float)RotY.Value, (float)RotZ.Value);
         obj.Scale = new Vec3(
@@ -291,9 +375,34 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        PushUndo("visibility");
         Document.SetVisible(Selected, VisibleCheck.IsChecked == true);
         UpdateStatus();
     }
+
+    private void OnCutKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => OnCut(sender, new RoutedEventArgs());
+
+    private void OnCopyKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => OnCopy(sender, new RoutedEventArgs());
+
+    private void OnPasteKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => OnPaste(sender, new RoutedEventArgs());
+
+    private void OnUndoKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => OnUndo(sender, new RoutedEventArgs());
+
+    private void OnRedoKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => OnRedo(sender, new RoutedEventArgs());
+
+    private void OnNewKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => OnNewScene(sender, new RoutedEventArgs());
+
+    private void OnOpenKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => OnOpenScene(sender, new RoutedEventArgs());
+
+    private void OnSaveKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => OnSaveScene(sender, new RoutedEventArgs());
 
     private void OnSelectTool(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
@@ -351,6 +460,7 @@ public sealed partial class MainWindow : Window
         if (ViewportHost.IsEditMode && ViewportHost.Edit.Target is not null)
         {
             var target = ViewportHost.Edit.Target;
+            PushUndo("delete-element");
             MeshEditor.Delete(target.GetMesh(), ViewportHost.Edit.Selection);
             Document.IsDirty = true;
             UpdateStatus();
@@ -368,6 +478,7 @@ public sealed partial class MainWindow : Window
         }
 
         var target = ViewportHost.Edit.Target;
+        PushUndo("extrude");
         var result = MeshEditor.Extrude(
             target.GetMesh(), ViewportHost.Edit.Selection, MeshEditor.DefaultExtrudeDistance);
 
@@ -414,6 +525,7 @@ public sealed partial class MainWindow : Window
 
     private void AddPrimitive(PrimitiveParams parameters)
     {
+        PushUndo("add");
         Document.AddPrimitive(parameters);
         UpdateStatus();
     }
@@ -426,6 +538,7 @@ public sealed partial class MainWindow : Window
         }
 
         _clipboard = Selected.CloneWithNewId();
+        PushUndo("cut");
         Document.Remove(Selected);
         UpdateStatus();
         StatusText.Text = $"已剪切 {_clipboard.Name}，Ctrl+V 粘贴";
@@ -453,6 +566,7 @@ public sealed partial class MainWindow : Window
         var copy = _clipboard.CloneWithNewId();
         copy.Name = _clipboard.Name;
         copy.Position = copy.Position + new Vec3(0.5f, 0f, 0f);
+        PushUndo("paste");
         Document.Add(copy);
         UpdateStatus();
         StatusText.Text = $"已粘贴 {copy.Name}";
@@ -462,6 +576,7 @@ public sealed partial class MainWindow : Window
     {
         if (Selected is not null)
         {
+            PushUndo("duplicate");
             Document.Duplicate(Selected);
             UpdateStatus();
         }
@@ -471,6 +586,7 @@ public sealed partial class MainWindow : Window
     {
         if (Selected is not null)
         {
+            PushUndo("delete");
             Document.Remove(Selected);
             UpdateStatus();
         }

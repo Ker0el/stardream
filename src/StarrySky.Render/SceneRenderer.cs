@@ -259,6 +259,13 @@ public sealed class SceneRenderer : IDisposable
             var end = origin + direction * scale;
             _gizmo.AddLine(origin, end, colors[i]);
 
+            if (mode == GizmoMode.Scale)
+            {
+                // Scale handles are boxes at the tip, the way Maya draws them.
+                AddBox(end, scale * 0.08f, colors[i]);
+                continue;
+            }
+
             // Arrow head: two short lines angled back from the tip.
             var side = Vec3.Cross(direction, new Vec3(0.3f, 0.9f, 0.2f)).Normalized() * (scale * 0.12f);
             _gizmo.AddLine(end, end - direction * (scale * 0.18f) + side, colors[i]);
@@ -284,6 +291,31 @@ public sealed class SceneRenderer : IDisposable
         _gizmo.Draw(context);
 
         context.OMSetDepthStencilState(_depthTested);
+    }
+
+    private void AddBox(Vec3 center, float half, Color4 color)
+    {
+        var corners = new Vec3[8];
+        for (var i = 0; i < 8; i++)
+        {
+            corners[i] = center + new Vec3(
+                (i & 1) == 0 ? -half : half,
+                (i & 2) == 0 ? -half : half,
+                (i & 4) == 0 ? -half : half);
+        }
+
+        // 12 edges of the cube.
+        var edges = new[,]
+        {
+            { 0, 1 }, { 2, 3 }, { 4, 5 }, { 6, 7 },
+            { 0, 2 }, { 1, 3 }, { 4, 6 }, { 5, 7 },
+            { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 },
+        };
+
+        for (var i = 0; i < 12; i++)
+        {
+            _gizmo.AddLine(corners[edges[i, 0]], corners[edges[i, 1]], color);
+        }
     }
 
     private void AddRing(Vec3 origin, Vec3 axis, float radius, Color4 color)

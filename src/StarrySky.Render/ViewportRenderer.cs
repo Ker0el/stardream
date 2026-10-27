@@ -1,4 +1,5 @@
-﻿using Vortice.Direct3D11;
+﻿using StarrySky.Core.Math;
+using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 using static Vortice.Direct3D11.D3D11;
@@ -15,6 +16,7 @@ public sealed class ViewportRenderer : IDisposable
     private static readonly Color4 ClearColor = new(0.1176f, 0.1216f, 0.1333f, 1f);
 
     private readonly Device _device;
+    private readonly SceneRenderer _sceneRenderer;
     private IDXGISwapChain1? _swapChain;
     private ID3D11RenderTargetView? _renderTarget;
     private ID3D11Texture2D? _depthTexture;
@@ -25,6 +27,7 @@ public sealed class ViewportRenderer : IDisposable
     public ViewportRenderer(Device device, int width, int height)
     {
         _device = device;
+        _sceneRenderer = new SceneRenderer(device);
         CreateSwapChain(Math.Max(1, width), Math.Max(1, height));
         CreateSizeDependentResources(Math.Max(1, width), Math.Max(1, height));
     }
@@ -105,7 +108,7 @@ public sealed class ViewportRenderer : IDisposable
         _swapChain!.ResizeBuffers(2, (uint)pixelWidth, (uint)pixelHeight, Format.B8G8R8A8_UNorm, SwapChainFlags.None);
     }
 
-    public void Render()
+    public void Render(Mat4 view, Mat4 projection)
     {
         if (_swapChain is null || _renderTarget is null || _depthView is null)
         {
@@ -113,14 +116,18 @@ public sealed class ViewportRenderer : IDisposable
         }
 
         var context = _device.Context;
+        context.RSSetViewport(new Viewport(0f, 0f, _width, _height, 0f, 1f));
         context.OMSetRenderTargets(_renderTarget, _depthView);
         context.ClearRenderTargetView(_renderTarget, ClearColor);
         context.ClearDepthStencilView(_depthView, DepthStencilClearFlags.Depth, 1f, 0);
+        _sceneRenderer.DrawGrid(projection * view);
+        _sceneRenderer.DrawAxes(projection * view);
         _swapChain.Present(1, PresentFlags.None);
     }
 
     public void Dispose()
     {
+        _sceneRenderer.Dispose();
         _renderTarget?.Dispose();
         _depthView?.Dispose();
         _depthTexture?.Dispose();

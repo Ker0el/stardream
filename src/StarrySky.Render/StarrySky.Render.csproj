@@ -15,4 +15,7 @@
     <ProjectReference Include="..\StarrySky.Core\StarrySky.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Shaders\**\*.hlsl" />
+  </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-<Window
+﻿<Window
     x:Class="StarrySky.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -33,7 +33,7 @@
                 <MenuFlyoutItem Text="着色" />
             </MenuBarItem>
             <MenuBarItem Title="帮助">
-                <MenuFlyoutItem Text="关于 星空" />
+                <MenuFlyoutItem Text="关于星空" />
             </MenuBarItem>
         </MenuBar>
 
@@ -49,10 +49,10 @@
                 Padding="4,8"
                 Spacing="4"
                 Background="#CC16171A">
-                <Button Width="36" Height="36" Content="➤" ToolTipService.ToolTip="选择 (Q)" />
-                <Button Width="36" Height="36" Content="✥" ToolTipService.ToolTip="移动 (W)" />
-                <Button Width="36" Height="36" Content="⟳" ToolTipService.ToolTip="旋转 (E)" />
-                <Button Width="36" Height="36" Content="⤢" ToolTipService.ToolTip="缩放 (R)" />
+                <Button Width="36" Height="36" Content="➤" ToolTipService.ToolTip="选择（Q）" />
+                <Button Width="36" Height="36" Content="✥" ToolTipService.ToolTip="移动（W）" />
+                <Button Width="36" Height="36" Content="⟳" ToolTipService.ToolTip="旋转（E）" />
+                <Button Width="36" Height="36" Content="⤢" ToolTipService.ToolTip="缩放（R）" />
                 <Button Width="36" Height="36" Content="＋" ToolTipService.ToolTip="添加基本体" />
             </StackPanel>
 
@@ -71,7 +71,7 @@
                     Grid.Row="0"
                     Margin="12,12,12,4"
                     FontWeight="SemiBold"
-                    Text="Outliner" />
+                    Text="大纲" />
                 <ListView Grid.Row="0" Margin="8,36,8,8" />
 
                 <Rectangle
@@ -83,7 +83,7 @@
                     Grid.Row="2"
                     Margin="12,12,12,4"
                     FontWeight="SemiBold"
-                    Text="Properties" />
+                    Text="属性" />
             </Grid>
         </Grid>
 

@@ -42,6 +42,10 @@ public sealed partial class ViewportControl : UserControl
     private double _lastY;
     private double _pressX;
     private double _pressY;
+    private GizmoDrag? _gizmoDrag;
+
+    public GizmoMode GizmoMode { get; set; } = GizmoMode.Translate;
+    public bool GizmoVisible { get; set; } = true;
 
     public SceneDocument Document { get; } = new();
     public OrbitCamera Camera => Document.Camera;
@@ -136,7 +140,7 @@ public sealed partial class ViewportControl : UserControl
         {
             var (width, height) = PixelSize();
             _renderer.Resize(width, height);
-            _renderer.Render(Document, Edit);
+            _renderer.Render(Document, Edit, GizmoVisible ? GizmoMode : null);
         }
         catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or ObjectDisposedException)
         {
@@ -164,9 +168,38 @@ public sealed partial class ViewportControl : UserControl
         else
         {
             _drag = DragMode.None;
+            TryBeginGizmoDrag(_lastX, _lastY);
         }
 
         Panel.CapturePointer(e.Pointer);
+    }
+
+    /// <summary>Starts a gizmo drag when the press landed on a handle.</summary>
+    private bool TryBeginGizmoDrag(double x, double y)
+    {
+        _gizmoDrag = null;
+
+        if (Edit.Active || Document.Selected is null)
+        {
+            return false;
+        }
+
+        var (width, height) = PixelSize();
+        var aspect = height > 0 ? (float)width / height : 1f;
+        var viewProjection = Camera.GetProjection(aspect) * Camera.GetView();
+        var scale = Camera.Distance * 0.12f;
+        var screen = new Vec2((float)(x * Panel.CompositionScaleX), (float)(y * Panel.CompositionScaleY));
+
+        var axis = GizmoHitTest.Hit(Document.Selected, GizmoMode, viewProjection, screen, width, height, scale);
+        if (axis is null)
+        {
+            return false;
+        }
+
+        var ray = Camera.ScreenToRay(screen, width, height);
+        var viewDirection = (Camera.Target - Camera.Eye).Normalized();
+        _gizmoDrag = GizmoDrag.Begin(Document.Selected, GizmoMode, axis.Value, ray, viewDirection, scale);
+        return _gizmoDrag is not null;
     }
 
     private void OnPointerMoved(object sender, PointerRoutedEventArgs e)
@@ -174,6 +207,18 @@ public sealed partial class ViewportControl : UserControl
         var point = e.GetCurrentPoint(InputLayer);
         var x = point.Position.X;
         var y = point.Position.Y;
+
+        if (_gizmoDrag is not null)
+        {
+            var (gw, gh) = PixelSize();
+            var gray = Camera.ScreenToRay(
+                new Vec2((float)(x * Panel.CompositionScaleX), (float)(y * Panel.CompositionScaleY)),
+                gw, gh);
+            _gizmoDrag.Update(gray, (Camera.Target - Camera.Eye).Normalized());
+            _lastX = x;
+            _lastY = y;
+            return;
+        }
 
         if (_drag != DragMode.None)
         {
@@ -200,6 +245,15 @@ public sealed partial class ViewportControl : UserControl
 
     private void OnPointerReleased(object sender, PointerRoutedEventArgs e)
     {
+        if (_gizmoDrag is not null)
+        {
+            _gizmoDrag = null;
+            _drag = DragMode.None;
+            Panel.ReleasePointerCapture(e.Pointer);
+            Document.IsDirty = true;
+            return;
+        }
+
         var moved = Math.Abs(_lastX - _pressX) + Math.Abs(_lastY - _pressY);
         var wasCameraDrag = _drag != DragMode.None;
         _drag = DragMode.None;

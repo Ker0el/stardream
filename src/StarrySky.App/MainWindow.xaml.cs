@@ -202,10 +202,27 @@ public sealed partial class MainWindow : Window
     {
         var mode = ViewportHost.IsEditMode
             ? $"编辑模式 · {ElementName(ViewportHost.Edit.Selection.Mode)} · 选中 {ViewportHost.Edit.Selection.Count}"
-            : Selected is null ? "无选中" : $"已选中 {Selected.Name}";
+            : Selected is null
+                ? "无选中"
+                : $"已选中 {Selected.Name} · {ToolName(ViewportHost)}";
 
         StatusText.Text = $"{mode} · {Document.Objects.Count} 个对象 · {Document.TriangleCount} 三角形";
         Title = Document.IsDirty ? "星空 — 未保存*" : "星空";
+    }
+
+    private static string ToolName(ViewportControl viewport)
+    {
+        if (!viewport.GizmoVisible)
+        {
+            return "选择";
+        }
+
+        return viewport.GizmoMode switch
+        {
+            GizmoMode.Translate => "移动",
+            GizmoMode.Rotate => "旋转",
+            _ => "缩放",
+        };
     }
 
     private static string ElementName(ElementMode mode) => mode switch
@@ -273,6 +290,28 @@ public sealed partial class MainWindow : Window
         }
 
         Document.SetVisible(Selected, VisibleCheck.IsChecked == true);
+        UpdateStatus();
+    }
+
+    private void OnSelectTool(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        ViewportHost.GizmoVisible = false;
+        UpdateStatus();
+    }
+
+    private void OnTranslateTool(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => SetGizmo(GizmoMode.Translate);
+
+    private void OnRotateTool(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => SetGizmo(GizmoMode.Rotate);
+
+    private void OnScaleTool(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        => SetGizmo(GizmoMode.Scale);
+
+    private void SetGizmo(GizmoMode mode)
+    {
+        ViewportHost.GizmoMode = mode;
+        ViewportHost.GizmoVisible = true;
         UpdateStatus();
     }
 

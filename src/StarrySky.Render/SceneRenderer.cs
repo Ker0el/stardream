@@ -29,6 +29,7 @@ public sealed class SceneRenderer : IDisposable
     private readonly LineBatch _selection = new();
     private readonly LineBatch _editWire = new();
     private readonly LineBatch _editPoints = new();
+    private readonly LineBatch _gizmo = new();
 
     private readonly ID3D11VertexShader _solidVertexShader;
     private readonly ID3D11PixelShader _solidPixelShader;
@@ -229,6 +230,80 @@ public sealed class SceneRenderer : IDisposable
         context.OMSetDepthStencilState(_depthTested);
     }
 
+    /// <summary>Draws the transform gizmo for the selected object.</summary>
+    public void DrawGizmo(SceneObject target, GizmoMode mode, Mat4 viewProjection, float scale)
+    {
+        _gizmo.Clear();
+
+        var origin = target.Position;
+        var colors = new[]
+        {
+            new Color4(0.95f, 0.3f, 0.3f, 1f),
+            new Color4(0.35f, 0.9f, 0.4f, 1f),
+            new Color4(0.35f, 0.55f, 1f, 1f),
+        };
+
+        var axes = new[] { Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ };
+        for (var i = 0; i < 3; i++)
+        {
+            var direction = mode == GizmoMode.Scale
+                ? target.LocalMatrix().TransformDirection(axes[i]).Normalized()
+                : axes[i];
+
+            if (mode == GizmoMode.Rotate)
+            {
+                AddRing(origin, direction, scale, colors[i]);
+                continue;
+            }
+
+            var end = origin + direction * scale;
+            _gizmo.AddLine(origin, end, colors[i]);
+
+            // Arrow head: two short lines angled back from the tip.
+            var side = Vec3.Cross(direction, new Vec3(0.3f, 0.9f, 0.2f)).Normalized() * (scale * 0.12f);
+            _gizmo.AddLine(end, end - direction * (scale * 0.18f) + side, colors[i]);
+            _gizmo.AddLine(end, end - direction * (scale * 0.18f) - side, colors[i]);
+        }
+
+        var center = new Color4(0.95f, 0.85f, 0.3f, 1f);
+        var s = scale * 0.06f;
+        _gizmo.AddLine(origin + new Vec3(-s, 0, 0), origin + new Vec3(s, 0, 0), center);
+        _gizmo.AddLine(origin + new Vec3(0, -s, 0), origin + new Vec3(0, s, 0), center);
+
+        var context = _device.Context;
+        UploadLineConstants(context, viewProjection);
+
+        context.IASetInputLayout(_lineInputLayout);
+        context.IASetPrimitiveTopology(PrimitiveTopology.LineList);
+        context.VSSetShader(_lineVertexShader);
+        context.PSSetShader(_linePixelShader);
+        context.VSSetConstantBuffer(0, _constantBuffer);
+        context.OMSetDepthStencilState(_depthDisabled);
+
+        _gizmo.Upload(_device.D3DDevice, context);
+        _gizmo.Draw(context);
+
+        context.OMSetDepthStencilState(_depthTested);
+    }
+
+    private void AddRing(Vec3 origin, Vec3 axis, float radius, Color4 color)
+    {
+        const int samples = 48;
+        var normal = axis.Normalized();
+        var reference = MathF.Abs(normal.Y) < 0.9f ? Vec3.UnitY : Vec3.UnitX;
+        var tangent = Vec3.Cross(normal, reference).Normalized();
+        var bitangent = Vec3.Cross(normal, tangent);
+
+        var previous = origin + tangent * radius;
+        for (var i = 1; i <= samples; i++)
+        {
+            var angle = 2f * MathF.PI * i / samples;
+            var point = origin + (tangent * MathF.Cos(angle) + bitangent * MathF.Sin(angle)) * radius;
+            _gizmo.AddLine(previous, point, color);
+            previous = point;
+        }
+    }
+
     public void DrawMeshes(SceneDocument document, Mat4 viewProjection)
     {
         var context = _device.Context;
@@ -343,6 +418,7 @@ public sealed class SceneRenderer : IDisposable
         _selection.Dispose();
         _editWire.Dispose();
         _editPoints.Dispose();
+        _gizmo.Dispose();
         _depthDisabled.Dispose();
         _depthTested.Dispose();
         _constantBuffer.Dispose();

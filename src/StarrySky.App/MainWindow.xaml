@@ -8,6 +8,10 @@
     <Grid>
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="F8" Invoked="OnToggleEditMode" />
+            <KeyboardAccelerator Key="Q" Invoked="OnSelectTool" />
+            <KeyboardAccelerator Key="W" Invoked="OnTranslateTool" />
+            <KeyboardAccelerator Key="E" Invoked="OnRotateTool" />
+            <KeyboardAccelerator Key="R" Invoked="OnScaleTool" />
             <KeyboardAccelerator Key="F9" Invoked="OnVertexMode" />
             <KeyboardAccelerator Key="F10" Invoked="OnEdgeMode" />
             <KeyboardAccelerator Key="F11" Invoked="OnFaceMode" />

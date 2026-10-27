@@ -110,7 +110,7 @@ public sealed class ViewportRenderer : IDisposable
         _swapChain!.ResizeBuffers(2, (uint)pixelWidth, (uint)pixelHeight, Format.B8G8R8A8_UNorm, SwapChainFlags.None);
     }
 
-    public void Render(SceneDocument document, EditState? edit = null)
+    public void Render(SceneDocument document, EditState? edit = null, GizmoMode? gizmoMode = GizmoMode.Translate)
     {
         if (_swapChain is null || _renderTarget is null || _depthView is null)
         {
@@ -135,6 +135,12 @@ public sealed class ViewportRenderer : IDisposable
         }
 
         _sceneRenderer.DrawSelectionWires(document, viewProjection);
+
+        if (document.Selected is not null && gizmoMode is not null && (edit is null || !edit.Active))
+        {
+            var gizmoScale = document.Camera.Distance * 0.12f;
+            _sceneRenderer.DrawGizmo(document.Selected, gizmoMode.Value, viewProjection, gizmoScale);
+        }
         _sceneRenderer.DrawGrid(viewProjection);
         _sceneRenderer.DrawAxes(viewProjection);
         _swapChain.Present(1, PresentFlags.None);

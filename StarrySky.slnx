@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/StarrySky.Core/StarrySky.Core.csproj" />
+    <Project Path="src/StarrySky.Render/StarrySky.Render.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StarrySky.Core.Tests/StarrySky.Core.Tests.csproj" />
+  </Folder>
+</Solution>

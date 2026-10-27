@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>StarDream.Tools</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\StarDream.Core\StarDream.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\native\bin\x64\StarDream.FbxNative.dll" Link="StarDream.FbxNative.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\native\bin\x64\StarDream.FbxNative.dll')" />
+  </ItemGroup>
+</Project>

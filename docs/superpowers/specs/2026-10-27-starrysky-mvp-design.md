@@ -1,4 +1,4 @@
-# 星空（StarrySky）—— Windows 桌面 3D 建模 MVP 设计
+# 星空（StarDream）—— Windows 桌面 3D 建模 MVP 设计
 
 日期：2026-10-27
 状态：待批准
@@ -8,7 +8,7 @@
 
 ## 1. 这是什么东西，为什么做
 
-一个 Windows 桌面 3D 建模工具的最小可行产品，显示名 **星空**，代码里叫 **StarrySky**（中文做程序集名会在部分工具链上出编码问题，显示名用中文，命名空间用英文）。
+一个 Windows 桌面 3D 建模工具的最小可行产品，显示名 **星空**，代码里叫 **StarDream**（中文做程序集名会在部分工具链上出编码问题，显示名用中文，命名空间用英文）。
 
 **界面参考 Blender**：分区、面板、视口布局。
 **操作参考 Maya**：相机导航、快捷键、框选习惯。
@@ -159,7 +159,7 @@
 | F5 | 对象旋转 | gizmo 三轴圆环；Properties 欧拉角输入 | 绕 X 转 90° 后，物体局部 Y 轴指向世界 Z 轴 |
 | F6 | 对象缩放 | gizmo 三轴方块 + 中心整体；Properties 输入 | 旋转过的物体沿局部轴缩放不产生剪切；最小 0.01 |
 | F7 | 对象管理 | 重命名、删除、复制、显隐 | 复制体在 X 方向偏移 0.5 并自动选中 |
-| F8 | 场景保存 | 存为 `.skyscene`（JSON） | 关掉重开，对象数量/名字/变换/颜色完全一致 |
+| F8 | 场景保存 | 存为 `.stardream`（JSON） | 关掉重开，对象数量/名字/变换/颜色完全一致 |
 | F9 | 场景打开 | 读取上述文件 | 打开后可交互，相机恢复到**保存时**的状态 |
 | F10 | 脏标记与拦截 | 有未保存修改时新建/打开/关窗弹确认 | 点"取消"后什么都没变；保存被取消则原操作中止 |
 | F11 | 编辑模式 | **F8** 进出；进入时只显示当前物体的网格 | 进出不改变物体本身 |
@@ -177,11 +177,11 @@
 
 ```
 D:\111
-├─ StarrySky.sln
+├─ StarDream.sln
 ├─ native/
-│  └─ StarrySky.FbxNative/      ufbx_write.c/.h + 导出 DLL（MSVC x64）
+│  └─ StarDream.FbxNative/      ufbx_write.c/.h + 导出 DLL（MSVC x64）
 ├─ src/
-│  ├─ StarrySky.Core/           纯 .NET，无 UI 依赖，可单测
+│  ├─ StarDream.Core/           纯 .NET，无 UI 依赖，可单测
 │  │  ├─ Math/                  Vec3、Mat4、Quat、Ray、Plane、Euler
 │  │  ├─ Meshes/                Mesh、Face、邻接表、基本体生成器、法线平滑
 │  │  ├─ Editing/               元素选择、删除、挤出、拓扑重建
@@ -189,19 +189,19 @@ D:\111
 │  │  ├─ Picking/               射线求交、屏幕空间元素拾取
 │  │  ├─ Export/                ufbx-write 的 P/Invoke、UE 导出配置、UV 盒式投影
 │  │  └─ Cameras/               OrbitCamera
-│  ├─ StarrySky.Render/         D3D11 渲染器
+│  ├─ StarDream.Render/         D3D11 渲染器
 │  │  ├─ Device.cs              设备、交换链、深度缓冲、resize
 │  │  ├─ Shaders/               HLSL 源文件（嵌入资源，运行时编译）
 │  │  ├─ SceneRenderer.cs       实体、网格、坐标轴
 │  │  ├─ EditModeRenderer.cs    点、边、选中高亮
 │  │  └─ GizmoRenderer.cs       三套 gizmo
-│  └─ StarrySky.App/            WinUI 3 应用
+│  └─ StarDream.App/            WinUI 3 应用
 │     ├─ MainWindow.xaml        亚克力、布局、菜单、快捷键
 │     ├─ ViewportControl        SwapChainPanel 宿主 + 输入
 │     ├─ Panels/                Outliner、Properties
 │     └─ ViewModels/            绑定层
 ├─ tests/
-│  ├─ StarrySky.Core.Tests/     xUnit
+│  ├─ StarDream.Core.Tests/     xUnit
 │  └─ interop/                  UE / Blender 无头导入脚本
 └─ docs/
 ```
@@ -301,8 +301,8 @@ class Mesh {
 **用现成的库**：[ufbx-write](https://github.com/ufbx/ufbx-write)，MIT / 公有领域双许可，单文件 C99，纯 C ABI。**锁定一个 commit**，不跟 `main`。
 
 接入：
-- `native/StarrySky.FbxNative` 把 `ufbx_write.c/.h` 编成 x64 DLL（MSVC）。
-- `StarrySky.Core/Export` 写一层薄 P/Invoke，对上层暴露 `FbxExporter.Export(doc, path, profile)`。
+- `native/StarDream.FbxNative` 把 `ufbx_write.c/.h` 编成 x64 DLL（MSVC）。
+- `StarDream.Core/Export` 写一层薄 P/Invoke，对上层暴露 `FbxExporter.Export(doc, path, profile)`。
 
 **导出配置**：
 
@@ -371,7 +371,7 @@ Unity 和 3ds Max 机器上没有，不作为本期验收项。
 
 ### 8.11 自动保存
 
-- 有未保存修改时，每 30 秒写一次 `%LOCALAPPDATA%\StarrySky\autosave.skyscene`。
+- 有未保存修改时，每 30 秒写一次 `%LOCALAPPDATA%\StarDream\autosave.stardream`。
 - 正常保存后删除草稿。
 - 启动时若发现草稿比上次保存新，弹一次「恢复上次内容？」。
 - 没有撤销，这条是唯一的误操作兜底。
@@ -387,7 +387,7 @@ Unity 和 3ds Max 机器上没有，不作为本期验收项。
 - `WindowsPackageType=None`，`WindowsAppSDKSelfContained=true`。
 - 目标框架：`net8.0-windows10.0.26100.0`；若最新 Windows App SDK 要求更高则上 `net10.0-windows…`，实现时按 NuGet 实际支持锁定。
 - 依赖锁定精确版本：`Microsoft.WindowsAppSDK`、`Vortice.Direct3D11`、`Vortice.WinUI`、`Vortice.D3DCompiler`、`CommunityToolkit.WinUI.Controls.Sizers`。
-- 开发时 `dotnet run --project src/StarrySky.App`。
+- 开发时 `dotnet run --project src/StarDream.App`。
 - 发布：`dotnet publish -c Release -r win-x64 --self-contained true`，产物是可直接双击的目录；目标机器只需 VC++ 运行库。
 
 ## 9. 关键风险与应对

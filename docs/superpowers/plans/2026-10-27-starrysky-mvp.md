@@ -1,14 +1,14 @@
-# 星空（StarrySky）MVP 实现计划
+# 星空（StarDream）MVP 实现计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 交付一个可运行的 Windows 桌面 3D 建模工具：能加基本体、进编辑模式改点线面、挤出成型、保存重开、导出 UE 可用的 FBX。
 
-**Architecture:** 三个 .NET 项目加一个原生 FBX DLL。`StarrySky.Core` 放纯逻辑（数学、网格、场景、拾取、编辑、导出），不依赖 UI，全部可单测；`StarrySky.Render` 用 Vortice 把 Core 数据画到 D3D11 交换链；`StarrySky.App` 是 WinUI 3 外壳，负责布局、输入和绑定。FBX 由 ufbx-write（MIT）编成原生 DLL，通过 P/Invoke 调用。
+**Architecture:** 三个 .NET 项目加一个原生 FBX DLL。`StarDream.Core` 放纯逻辑（数学、网格、场景、拾取、编辑、导出），不依赖 UI，全部可单测；`StarDream.Render` 用 Vortice 把 Core 数据画到 D3D11 交换链；`StarDream.App` 是 WinUI 3 外壳，负责布局、输入和绑定。FBX 由 ufbx-write（MIT）编成原生 DLL，通过 P/Invoke 调用。
 
 **Tech Stack:** C# / .NET 8、WinUI 3（Windows App SDK）、Vortice.Direct3D11 / DXGI / D3DCompiler / WinUI、CommunityToolkit.WinUI.Controls.Sizers、xUnit、ufbx-write（C99）。
 
-**Spec:** `D:\111\docs\superpowers\specs\2026-10-27-starrysky-mvp-design.md`
+**Spec:** `D:\111\docs\superpowers\specs\2026-10-27-stardream-mvp-design.md`
 
 ## Global Constraints
 
@@ -22,7 +22,7 @@
 - 法线：逐角法线 + 30° 自动平滑。
 - 界面：深色 + `DesktopAcrylicBackdrop`；视口不透明。
 - 快捷键遵循 Maya：Alt+左腾挪 / Alt+中平移 / Alt+右推拉；Q/W/E/R 工具；F8 对象↔编辑；F9/F10/F11 点/线/面；Ctrl+E 挤出；4/5 线框/着色；F 聚焦；A 全览。
-- 场景文件扩展名 `.skyscene`，JSON，`version: 1`。
+- 场景文件扩展名 `.stardream`，JSON，`version: 1`。
 - FBX：二进制、version 7400、Y-up（+X 右 / +Y 上 / −Z 前）、`unit_scale_factor = 100`、三角化、UV0 盒式投影、逐角法线、每对象一个带 T/R/S 的节点。
 - 无撤销；有 30 秒自动保存草稿。
 - 许可：只用 MIT/公有领域/BSD 依赖；不复制 Blender（GPL）源码。
@@ -33,7 +33,7 @@
 
 1. **空场景 / 没有选中对象时按任何快捷键**（W/E/R/F/Delete/Ctrl+E/Ctrl+D）：应该什么都不发生，不抛异常，不崩溃。—— 测试落在 Task 18、Task 27。
 2. **退化数值**：缩放设为 0 或负数、位置/旋转出现 NaN、挤出距离为 0、旋转恰好 ±180°：不能产生 NaN 顶点，不能崩。—— 测试落在 Task 5、Task 18、Task 27。
-3. **打开损坏或版本不符的 `.skyscene`**：应抛可捕获的错误并**保持当前文档不变**，而不是崩溃或清空场景。—— 测试落在 Task 19。
+3. **打开损坏或版本不符的 `.stardream`**：应抛可捕获的错误并**保持当前文档不变**，而不是崩溃或清空场景。—— 测试落在 Task 19。
 4. **视口尺寸退化为 0**（最小化、拖到极窄、DPI 切换）：交换链 resize 不能崩，恢复后画面正常。—— 测试落在 Task 3。
 5. **网格被删到 0 个面之后**：退出编辑模式、保存、导出都应正常工作，不崩溃。—— 测试落在 Task 26、Task 28。
 
@@ -42,11 +42,11 @@
 ### Task 1: 解决方案骨架与依赖锁定
 
 **Files:**
-- Create: `.gitignore`, `Directory.Build.props`, `StarrySky.sln`
-- Create: `src/StarrySky.Core/StarrySky.Core.csproj`
-- Create: `src/StarrySky.Render/StarrySky.Render.csproj`
-- Create: `src/StarrySky.App/StarrySky.App.csproj`
-- Create: `tests/StarrySky.Core.Tests/StarrySky.Core.Tests.csproj`
+- Create: `.gitignore`, `Directory.Build.props`, `StarDream.sln`
+- Create: `src/StarDream.Core/StarDream.Core.csproj`
+- Create: `src/StarDream.Render/StarDream.Render.csproj`
+- Create: `src/StarDream.App/StarDream.App.csproj`
+- Create: `tests/StarDream.Core.Tests/StarDream.Core.Tests.csproj`
 
 **Interfaces:**
 - Consumes: 无
@@ -64,14 +64,14 @@ git init
 - [ ] **Step 2: 建项目**
 
 ```powershell
-dotnet new sln -n StarrySky
-dotnet new classlib -n StarrySky.Core -o src/StarrySky.Core -f net8.0
-dotnet new classlib -n StarrySky.Render -o src/StarrySky.Render -f net8.0
-dotnet new xunit -n StarrySky.Core.Tests -o tests/StarrySky.Core.Tests -f net8.0
-dotnet sln add src/StarrySky.Core src/StarrySky.Render tests/StarrySky.Core.Tests
+dotnet new sln -n StarDream
+dotnet new classlib -n StarDream.Core -o src/StarDream.Core -f net8.0
+dotnet new classlib -n StarDream.Render -o src/StarDream.Render -f net8.0
+dotnet new xunit -n StarDream.Core.Tests -o tests/StarDream.Core.Tests -f net8.0
+dotnet sln add src/StarDream.Core src/StarDream.Render tests/StarDream.Core.Tests
 ```
 
-`StarrySky.App` 手写（模板依赖 VS）：`net8.0-windows10.0.26100.0`、`UseWinUI=true`、`WindowsPackageType=None`、`WindowsAppSDKSelfContained=true`、`OutputType=WinExe`。
+`StarDream.App` 手写（模板依赖 VS）：`net8.0-windows10.0.26100.0`、`UseWinUI=true`、`WindowsPackageType=None`、`WindowsAppSDKSelfContained=true`、`OutputType=WinExe`。
 
 - [ ] **Step 3: 加引用与精确版本**
 
@@ -79,10 +79,10 @@ Core 无外部依赖。Render 引用 Core + `Vortice.Direct3D11`、`Vortice.WinU
 
 - [ ] **Step 4: 验证构建**
 
-Run: `dotnet build StarrySky.sln`
+Run: `dotnet build StarDream.sln`
 Expected: `Build succeeded`，0 error。
 
-Run: `dotnet test tests/StarrySky.Core.Tests/StarrySky.Core.Tests.csproj`
+Run: `dotnet test tests/StarDream.Core.Tests/StarDream.Core.Tests.csproj`
 Expected: 1 个占位测试通过。
 
 - [ ] **Step 5: 提交**
@@ -97,8 +97,8 @@ git commit -m "chore: solution skeleton with pinned dependencies"
 ### Task 2: 深色亚克力窗口
 
 **Files:**
-- Create: `src/StarrySky.App/App.xaml`, `src/StarrySky.App/App.xaml.cs`
-- Create: `src/StarrySky.App/MainWindow.xaml`, `src/StarrySky.App/MainWindow.xaml.cs`
+- Create: `src/StarDream.App/App.xaml`, `src/StarDream.App/App.xaml.cs`
+- Create: `src/StarDream.App/MainWindow.xaml`, `src/StarDream.App/MainWindow.xaml.cs`
 
 **Interfaces:**
 - Consumes: Task 1 的项目骨架
@@ -114,13 +114,13 @@ git commit -m "chore: solution skeleton with pinned dependencies"
 
 - [ ] **Step 3: 运行验证**
 
-Run: `dotnet run --project src/StarrySky.App`
+Run: `dotnet run --project src/StarDream.App`
 Expected: 窗口出现，标题"星空"，背景为深色亚克力（能透出桌面模糊），无异常退出。
 
 - [ ] **Step 4: 提交**
 
 ```bash
-git add src/StarrySky.App
+git add src/StarDream.App
 git commit -m "feat: dark acrylic main window"
 ```
 
@@ -129,10 +129,10 @@ git commit -m "feat: dark acrylic main window"
 ### Task 3: D3D11 设备与空视口清屏
 
 **Files:**
-- Create: `src/StarrySky.Render/Device.cs`
-- Create: `src/StarrySky.Render/ViewportRenderer.cs`
-- Create: `src/StarrySky.App/ViewportControl.xaml`, `ViewportControl.xaml.cs`
-- Modify: `src/StarrySky.App/MainWindow.xaml`
+- Create: `src/StarDream.Render/Device.cs`
+- Create: `src/StarDream.Render/ViewportRenderer.cs`
+- Create: `src/StarDream.App/ViewportControl.xaml`, `ViewportControl.xaml.cs`
+- Modify: `src/StarDream.App/MainWindow.xaml`
 
 **Interfaces:**
 - Consumes: Task 2 的窗口布局
@@ -159,7 +159,7 @@ git commit -m "feat: dark acrylic main window"
 
 - [ ] **Step 4: 运行验证**
 
-Run: `dotnet run --project src/StarrySky.App`
+Run: `dotnet run --project src/StarDream.App`
 Expected: 视口区域是 `#1E1F22` 深灰，缩放窗口不崩、不模糊，拖动窗口大小后画面填满。
 
 - [ ] **Step 5: 提交**
@@ -175,7 +175,7 @@ git commit -m "feat: d3d11 device and swapchain panel viewport"
 
 **Files:**
 - Create: `scripts/publish.ps1`
-- Modify: `src/StarrySky.App/StarrySky.App.csproj`
+- Modify: `src/StarDream.App/StarDream.App.csproj`
 
 **Interfaces:**
 - Consumes: Task 3
@@ -183,19 +183,19 @@ git commit -m "feat: d3d11 device and swapchain panel viewport"
 
 - [ ] **Step 1: 写 publish.ps1**
 
-`dotnet publish src/StarrySky.App -c Release -r win-x64 --self-contained true -o publish/`。
+`dotnet publish src/StarDream.App -c Release -r win-x64 --self-contained true -o publish/`。
 
 - [ ] **Step 2: 发布并搬移验证**
 
 Run: `pwsh scripts/publish.ps1`
-Expected: `publish/StarrySky.App.exe` 存在。
+Expected: `publish/StarDream.App.exe` 存在。
 
 把整个 `publish/` 复制到 `C:\Users\Star\Desktop\starrysmoke\`，双击 exe。
 Expected: 窗口正常打开。
 
 - [ ] **Step 3: 依赖检查**
 
-Run: `dumpbin /dependents publish\StarrySky.App.exe`（用 VS 的 dumpbin）
+Run: `dumpbin /dependents publish\StarDream.App.exe`（用 VS 的 dumpbin）
 Expected: 只依赖系统 DLL 和随包 DLL，不出现 `VCRUNTIME140.dll` 之外的 VS 私有依赖缺失。
 
 - [ ] **Step 4: 记录结论**
@@ -205,7 +205,7 @@ Expected: 只依赖系统 DLL 和随包 DLL，不出现 `VCRUNTIME140.dll` 之�
 - [ ] **Step 5: 提交**
 
 ```bash
-git add scripts src/StarrySky.App/StarrySky.App.csproj
+git add scripts src/StarDream.App/StarDream.App.csproj
 git commit -m "build: self-contained publish script and smoke check"
 ```
 
@@ -214,8 +214,8 @@ git commit -m "build: self-contained publish script and smoke check"
 ### Task 5: 核心数学
 
 **Files:**
-- Create: `src/StarrySky.Core/Math/Vec3.cs`, `Mat4.cs`, `Ray.cs`, `MathUtil.cs`
-- Create: `tests/StarrySky.Core.Tests/MathTests.cs`
+- Create: `src/StarDream.Core/Math/Vec3.cs`, `Mat4.cs`, `Ray.cs`, `MathUtil.cs`
+- Create: `tests/StarDream.Core.Tests/MathTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -257,7 +257,7 @@ Expected: 4 passed。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/StarrySky.Core/Math tests/StarrySky.Core.Tests/MathTests.cs
+git add src/StarDream.Core/Math tests/StarDream.Core.Tests/MathTests.cs
 git commit -m "feat: core vector and matrix math"
 ```
 
@@ -266,8 +266,8 @@ git commit -m "feat: core vector and matrix math"
 ### Task 6: 环绕相机
 
 **Files:**
-- Create: `src/StarrySky.Core/Cameras/OrbitCamera.cs`
-- Create: `tests/StarrySky.Core.Tests/OrbitCameraTests.cs`
+- Create: `src/StarDream.Core/Cameras/OrbitCamera.cs`
+- Create: `tests/StarDream.Core.Tests/OrbitCameraTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -300,7 +300,7 @@ Expected: FAIL，类型不存在。
 
 ```bash
 dotnet test --filter FullyQualifiedName~OrbitCameraTests
-git add src/StarrySky.Core/Cameras tests/StarrySky.Core.Tests/OrbitCameraTests.cs
+git add src/StarDream.Core/Cameras tests/StarDream.Core.Tests/OrbitCameraTests.cs
 git commit -m "feat: orbit camera with maya-style navigation"
 ```
 
@@ -309,10 +309,10 @@ git commit -m "feat: orbit camera with maya-style navigation"
 ### Task 7: 地面网格与世界坐标轴
 
 **Files:**
-- Create: `src/StarrySky.Render/LineBatch.cs`
-- Create: `src/StarrySky.Render/SceneRenderer.cs`
-- Create: `src/StarrySky.Render/Shaders/line.hlsl`
-- Modify: `src/StarrySky.Render/ViewportRenderer.cs`
+- Create: `src/StarDream.Render/LineBatch.cs`
+- Create: `src/StarDream.Render/SceneRenderer.cs`
+- Create: `src/StarDream.Render/Shaders/line.hlsl`
+- Modify: `src/StarDream.Render/ViewportRenderer.cs`
 
 **Interfaces:**
 - Consumes: Task 6 的 `OrbitCamera`
@@ -328,13 +328,13 @@ git commit -m "feat: orbit camera with maya-style navigation"
 
 - [ ] **Step 3: 运行验证**
 
-Run: `dotnet run --project src/StarrySky.App`
+Run: `dotnet run --project src/StarDream.App`
 Expected: 视口里能看到地面网格和三条彩色轴，能旋转/平移/缩放（本任务先接固定相机，导航在 Task 17 接线后生效）。
 
 - [ ] **Step 4: 提交**
 
 ```bash
-git add src/StarrySky.Render
+git add src/StarDream.Render
 git commit -m "feat: ground grid and world axes"
 ```
 
@@ -343,8 +343,8 @@ git commit -m "feat: ground grid and world axes"
 ### Task 8: 网格数据结构与拓扑
 
 **Files:**
-- Create: `src/StarrySky.Core/Meshes/Edge.cs`, `Mesh.cs`
-- Create: `tests/StarrySky.Core.Tests/MeshTests.cs`
+- Create: `src/StarDream.Core/Meshes/Edge.cs`, `Mesh.cs`
+- Create: `tests/StarDream.Core.Tests/MeshTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -375,7 +375,7 @@ Edges 用 `HashSet<Edge>` 累积后排序输出。Triangles 扇形：面 `[a,b,c
 
 ```bash
 dotnet test --filter FullyQualifiedName~MeshTests
-git add src/StarrySky.Core/Meshes tests/StarrySky.Core.Tests/MeshTests.cs
+git add src/StarDream.Core/Meshes tests/StarDream.Core.Tests/MeshTests.cs
 git commit -m "feat: mesh data structure and topology derivation"
 ```
 
@@ -384,9 +384,9 @@ git commit -m "feat: mesh data structure and topology derivation"
 ### Task 9: 基本体生成
 
 **Files:**
-- Create: `src/StarrySky.Core/Meshes/Primitives.cs`
-- Create: `src/StarrySky.Core/Scene/PrimitiveParams.cs`
-- Create: `tests/StarrySky.Core.Tests/PrimitivesTests.cs`
+- Create: `src/StarDream.Core/Meshes/Primitives.cs`
+- Create: `src/StarDream.Core/Scene/PrimitiveParams.cs`
+- Create: `tests/StarDream.Core.Tests/PrimitivesTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -412,7 +412,7 @@ git commit -m "feat: mesh data structure and topology derivation"
 
 ```bash
 dotnet test --filter FullyQualifiedName~PrimitivesTests
-git add src/StarrySky.Core/Meshes src/StarrySky.Core/Scene tests/StarrySky.Core.Tests/PrimitivesTests.cs
+git add src/StarDream.Core/Meshes src/StarDream.Core/Scene tests/StarDream.Core.Tests/PrimitivesTests.cs
 git commit -m "feat: primitive mesh generators"
 ```
 
@@ -421,9 +421,9 @@ git commit -m "feat: primitive mesh generators"
 ### Task 10: 逐角法线与 30° 平滑
 
 **Files:**
-- Create: `src/StarrySky.Core/Meshes/NormalSmoother.cs`
-- Modify: `src/StarrySky.Core/Meshes/Mesh.cs`
-- Create: `tests/StarrySky.Core.Tests/NormalSmootherTests.cs`
+- Create: `src/StarDream.Core/Meshes/NormalSmoother.cs`
+- Modify: `src/StarDream.Core/Meshes/Mesh.cs`
+- Create: `tests/StarDream.Core.Tests/NormalSmootherTests.cs`
 
 **Interfaces:**
 - Produces: `NormalSmoother.Compute(Mesh mesh)`，写满 `mesh.CornerNormals`；常量 `NormalSmoother.SmoothAngleDegrees = 30f`。
@@ -452,7 +452,7 @@ git commit -m "feat: primitive mesh generators"
 
 ```bash
 dotnet test --filter FullyQualifiedName~NormalSmootherTests
-git add src/StarrySky.Core/Meshes tests/StarrySky.Core.Tests/NormalSmootherTests.cs
+git add src/StarDream.Core/Meshes tests/StarDream.Core.Tests/NormalSmootherTests.cs
 git commit -m "feat: per-corner normals with 30 degree auto smoothing"
 ```
 
@@ -461,9 +461,9 @@ git commit -m "feat: per-corner normals with 30 degree auto smoothing"
 ### Task 11: 实体渲染与光照
 
 **Files:**
-- Create: `src/StarrySky.Render/MeshBuffers.cs`
-- Create: `src/StarrySky.Render/Shaders/solid.hlsl`
-- Modify: `src/StarrySky.Render/SceneRenderer.cs`
+- Create: `src/StarDream.Render/MeshBuffers.cs`
+- Create: `src/StarDream.Render/Shaders/solid.hlsl`
+- Modify: `src/StarDream.Render/SceneRenderer.cs`
 
 **Interfaces:**
 - Consumes: Task 8/10 的 `Mesh`、Task 6 的相机
@@ -480,13 +480,13 @@ Lambert + 半球环境光：`ambient = lerp(groundColor, skyColor, n.y*0.5+0.5)`
 - [ ] **Step 3: 运行验证**
 
 临时在 `ViewportRenderer.Render` 里硬编码一个立方体和一个球和一个圆柱一个平面。
-Run: `dotnet run --project src/StarrySky.App`
+Run: `dotnet run --project src/StarDream.App`
 Expected: 四个基本体可见；立方体每个面颜色均匀（硬边）、球面光滑过渡。
 
 - [ ] **Step 4: 提交**
 
 ```bash
-git add src/StarrySky.Render
+git add src/StarDream.Render
 git commit -m "feat: solid mesh rendering with lambert shading"
 ```
 
@@ -495,10 +495,10 @@ git commit -m "feat: solid mesh rendering with lambert shading"
 ### Task 12: 场景对象与参数化 Properties
 
 **Files:**
-- Create: `src/StarrySky.Core/Scene/SceneObject.cs`, `SceneDocument.cs`
-- Create: `src/StarrySky.App/Panels/PropertiesPanel.xaml`, `PropertiesPanel.xaml.cs`
-- Create: `src/StarrySky.App/ViewModels/SceneObjectViewModel.cs`
-- Create: `tests/StarrySky.Core.Tests/SceneObjectTests.cs`
+- Create: `src/StarDream.Core/Scene/SceneObject.cs`, `SceneDocument.cs`
+- Create: `src/StarDream.App/Panels/PropertiesPanel.xaml`, `PropertiesPanel.xaml.cs`
+- Create: `src/StarDream.App/ViewModels/SceneObjectViewModel.cs`
+- Create: `tests/StarDream.Core.Tests/SceneObjectTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -537,7 +537,7 @@ git commit -m "feat: solid mesh rendering with lambert shading"
 
 - [ ] **Step 4: 运行验证并提交**
 
-Run: `dotnet run --project src/StarrySky.App`
+Run: `dotnet run --project src/StarDream.App`
 Expected: 改分段数，视口里球的面数实时变化。
 
 ```bash
@@ -551,10 +551,10 @@ git commit -m "feat: scene objects and parametric properties panel"
 
 **Files:**
 - Create: `native/README.md`（记录 ufbx-write 的 commit hash）
-- Create: `native/StarrySky.FbxNative/ufbx_write.c`, `ufbx_write.h`（从锁定 commit 复制）
+- Create: `native/StarDream.FbxNative/ufbx_write.c`, `ufbx_write.h`（从锁定 commit 复制）
 - Create: `native/build.ps1`
-- Create: `src/StarrySky.Core/Export/FbxNative.cs`, `FbxExporter.cs`
-- Create: `tests/StarrySky.Core.Tests/FbxExporterTests.cs`
+- Create: `src/StarDream.Core/Export/FbxNative.cs`, `FbxExporter.cs`
+- Create: `tests/StarDream.Core.Tests/FbxExporterTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -563,7 +563,7 @@ git commit -m "feat: scene objects and parametric properties panel"
 
 - [ ] **Step 1: 编 DLL**
 
-`native/build.ps1`：用 vswhere 找 VS，调 `vcvars64.bat`，`cl /LD /O2 /DNDEBUG ufbx_write.c /Fe:StarrySky.FbxNative.dll`，输出到 `native/bin/x64/`，再复制到 App 输出目录。
+`native/build.ps1`：用 vswhere 找 VS，调 `vcvars64.bat`，`cl /LD /O2 /DNDEBUG ufbx_write.c /Fe:StarDream.FbxNative.dll`，输出到 `native/bin/x64/`，再复制到 App 输出目录。
 
 - [ ] **Step 2: 写失败测试**
 
@@ -630,8 +630,8 @@ git commit -m "test: headless fbx validation for unreal and blender"
 ### Task 15: 对象拾取
 
 **Files:**
-- Create: `src/StarrySky.Core/Picking/RayPicker.cs`
-- Create: `tests/StarrySky.Core.Tests/RayPickerTests.cs`
+- Create: `src/StarDream.Core/Picking/RayPicker.cs`
+- Create: `tests/StarDream.Core.Tests/RayPickerTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -656,7 +656,7 @@ Möller–Trumbore。先给射线乘对象 `TryInvert(LocalMatrix())` 转到局�
 
 ```bash
 dotnet test --filter FullyQualifiedName~RayPickerTests
-git add src/StarrySky.Core/Picking tests/StarrySky.Core.Tests/RayPickerTests.cs
+git add src/StarDream.Core/Picking tests/StarDream.Core.Tests/RayPickerTests.cs
 git commit -m "feat: object ray picking"
 ```
 
@@ -665,10 +665,10 @@ git commit -m "feat: object ray picking"
 ### Task 16: 选择、描边与 Outliner 同步
 
 **Files:**
-- Create: `src/StarrySky.App/ViewModels/MainViewModel.cs`
-- Create: `src/StarrySky.App/Panels/OutlinerPanel.xaml`, `OutlinerPanel.xaml.cs`
-- Create: `src/StarrySky.Render/OutlineRenderer.cs`
-- Modify: `src/StarrySky.App/ViewportControl.xaml.cs`
+- Create: `src/StarDream.App/ViewModels/MainViewModel.cs`
+- Create: `src/StarDream.App/Panels/OutlinerPanel.xaml`, `OutlinerPanel.xaml.cs`
+- Create: `src/StarDream.Render/OutlineRenderer.cs`
+- Modify: `src/StarDream.App/ViewportControl.xaml.cs`
 
 **Interfaces:**
 - Consumes: Task 15 的拾取
@@ -706,10 +706,10 @@ git commit -m "feat: object selection, outline and outliner sync"
 ### Task 17: Gizmo 绘制与命中
 
 **Files:**
-- Create: `src/StarrySky.Core/Editing/Gizmo.cs`（枚举与常量）
-- Create: `src/StarrySky.Core/Editing/GizmoHitTest.cs`
-- Create: `src/StarrySky.Render/GizmoRenderer.cs`
-- Create: `tests/StarrySky.Core.Tests/GizmoHitTestTests.cs`
+- Create: `src/StarDream.Core/Editing/Gizmo.cs`（枚举与常量）
+- Create: `src/StarDream.Core/Editing/GizmoHitTest.cs`
+- Create: `src/StarDream.Render/GizmoRenderer.cs`
+- Create: `tests/StarDream.Core.Tests/GizmoHitTestTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -747,9 +747,9 @@ git commit -m "feat: gizmo rendering and screen-space hit testing"
 ### Task 18: Gizmo 拖动
 
 **Files:**
-- Create: `src/StarrySky.Core/Editing/GizmoDrag.cs`
-- Create: `tests/StarrySky.Core.Tests/GizmoDragTests.cs`
-- Modify: `src/StarrySky.App/ViewportControl.xaml.cs`
+- Create: `src/StarDream.Core/Editing/GizmoDrag.cs`
+- Create: `tests/StarDream.Core.Tests/GizmoDragTests.cs`
+- Modify: `src/StarDream.App/ViewportControl.xaml.cs`
 
 **Interfaces:**
 - Produces:
@@ -784,8 +784,8 @@ git commit -m "feat: gizmo drag transforms with world and local axes"
 ### Task 19: 场景序列化
 
 **Files:**
-- Create: `src/StarrySky.Core/Scene/SceneSerializer.cs`, `SceneLoadException.cs`
-- Create: `tests/StarrySky.Core.Tests/SceneSerializerTests.cs`
+- Create: `src/StarDream.Core/Scene/SceneSerializer.cs`, `SceneLoadException.cs`
+- Create: `tests/StarDream.Core.Tests/SceneSerializerTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -820,8 +820,8 @@ git commit -m "feat: scene json serialization with version guard"
 ### Task 20: 文件交互、脏状态与关窗拦截
 
 **Files:**
-- Create: `src/StarrySky.App/Services/FileService.cs`
-- Modify: `src/StarrySky.App/MainWindow.xaml.cs`, `src/StarrySky.App/ViewModels/MainViewModel.cs`
+- Create: `src/StarDream.App/Services/FileService.cs`
+- Modify: `src/StarDream.App/MainWindow.xaml.cs`, `src/StarDream.App/ViewModels/MainViewModel.cs`
 
 **Interfaces:**
 - Consumes: Task 19 的序列化
@@ -832,7 +832,7 @@ git commit -m "feat: scene json serialization with version guard"
 
 - [ ] **Step 1: 实现 picker**
 
-`FileSavePicker` / `FileOpenPicker` + `InitializeWithWindow.Initialize(picker, hwnd)`。扩展名 `.skyscene`。
+`FileSavePicker` / `FileOpenPicker` + `InitializeWithWindow.Initialize(picker, hwnd)`。扩展名 `.stardream`。
 
 - [ ] **Step 2: 脏规则**
 
@@ -856,13 +856,13 @@ git commit -m "feat: save open dirty tracking and close interception"
 ### Task 21: 自动保存与恢复
 
 **Files:**
-- Create: `src/StarrySky.App/Services/AutoSaveService.cs`
-- Modify: `src/StarrySky.App/App.xaml.cs`
+- Create: `src/StarDream.App/Services/AutoSaveService.cs`
+- Modify: `src/StarDream.App/App.xaml.cs`
 
 **Interfaces:**
 - Produces:
   - `AutoSaveService.Start(SceneDocument doc)` / `Stop()`
-  - 路径 `%LOCALAPPDATA%\StarrySky\autosave.skyscene`
+  - 路径 `%LOCALAPPDATA%\StarDream\autosave.stardream`
   - `AutoSaveService.TryRecover() → SceneDocument?`
 
 - [ ] **Step 1: 实现**
@@ -883,8 +883,8 @@ git commit -m "feat: autosave draft and crash recovery"
 ### Task 22: 编辑模式的选择集与拓扑查询
 
 **Files:**
-- Create: `src/StarrySky.Core/Editing/EditSelection.cs`, `MeshQueries.cs`
-- Create: `tests/StarrySky.Core.Tests/EditSelectionTests.cs`
+- Create: `src/StarDream.Core/Editing/EditSelection.cs`, `MeshQueries.cs`
+- Create: `tests/StarDream.Core.Tests/EditSelectionTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -922,9 +922,9 @@ git commit -m "feat: edit selection sets and mesh topology queries"
 ### Task 23: 编辑模式渲染
 
 **Files:**
-- Create: `src/StarrySky.Render/EditModeRenderer.cs`
-- Create: `src/StarrySky.Render/Shaders/point.hlsl`, `Shaders/overlay.hlsl`
-- Modify: `src/StarrySky.Render/ViewportRenderer.cs`
+- Create: `src/StarDream.Render/EditModeRenderer.cs`
+- Create: `src/StarDream.Render/Shaders/point.hlsl`, `Shaders/overlay.hlsl`
+- Modify: `src/StarDream.Render/ViewportRenderer.cs`
 
 **Interfaces:**
 - Produces: `EditModeRenderer.Draw(Mesh mesh, Mat4 model, Mat4 viewProj, EditSelection selection, Vec3 cameraPos)`
@@ -942,7 +942,7 @@ git commit -m "feat: edit selection sets and mesh topology queries"
 Expected: 按 F8 进入编辑模式，能同时看到点/边/面和选中高亮。
 
 ```bash
-git add src/StarrySky.Render
+git add src/StarDream.Render
 git commit -m "feat: edit mode rendering"
 ```
 
@@ -951,8 +951,8 @@ git commit -m "feat: edit mode rendering"
 ### Task 24: 元素拾取与框选
 
 **Files:**
-- Create: `src/StarrySky.Core/Picking/ElementPicker.cs`
-- Create: `tests/StarrySky.Core.Tests/ElementPickerTests.cs`
+- Create: `src/StarDream.Core/Picking/ElementPicker.cs`
+- Create: `tests/StarDream.Core.Tests/ElementPickerTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -985,8 +985,8 @@ git commit -m "feat: element picking and box selection"
 ### Task 25: 元素变换
 
 **Files:**
-- Create: `src/StarrySky.Core/Editing/ElementTransform.cs`
-- Create: `tests/StarrySky.Core.Tests/ElementTransformTests.cs`
+- Create: `src/StarDream.Core/Editing/ElementTransform.cs`
+- Create: `tests/StarDream.Core.Tests/ElementTransformTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -1019,8 +1019,8 @@ git commit -m "feat: element transform in edit mode"
 ### Task 26: 删除元素
 
 **Files:**
-- Modify: `src/StarrySky.Core/Editing/MeshEditor.cs`（新建）
-- Create: `tests/StarrySky.Core.Tests/MeshEditorDeleteTests.cs`
+- Modify: `src/StarDream.Core/Editing/MeshEditor.cs`（新建）
+- Create: `tests/StarDream.Core.Tests/MeshEditorDeleteTests.cs`
 
 **Interfaces:**
 - Produces: `void MeshEditor.Delete(Mesh mesh, EditSelection sel)` — 面模式删面、点模式删引用该点的所有面、线模式删共享该边的面；之后清理孤立顶点并 `RebuildDerived()`。
@@ -1051,9 +1051,9 @@ git commit -m "feat: element deletion with orphan cleanup"
 ### Task 27: 挤出面
 
 **Files:**
-- Modify: `src/StarrySky.Core/Editing/MeshEditor.cs`
-- Create: `tests/StarrySky.Core.Tests/MeshEditorExtrudeTests.cs`
-- Modify: `src/StarrySky.App/ViewportControl.xaml.cs`（Ctrl+E 接线）
+- Modify: `src/StarDream.Core/Editing/MeshEditor.cs`
+- Create: `tests/StarDream.Core.Tests/MeshEditorExtrudeTests.cs`
+- Modify: `src/StarDream.App/ViewportControl.xaml.cs`（Ctrl+E 接线）
 
 **Interfaces:**
 - Produces:
@@ -1092,9 +1092,9 @@ git commit -m "feat: face extrusion with connected-component handling"
 ### Task 28: 完整 FBX 导出
 
 **Files:**
-- Create: `src/StarrySky.Core/Export/UvProjector.cs`
-- Modify: `src/StarrySky.Core/Export/FbxExporter.cs`
-- Create: `tests/StarrySky.Core.Tests/FbxExportContentTests.cs`
+- Create: `src/StarDream.Core/Export/UvProjector.cs`
+- Modify: `src/StarDream.Core/Export/FbxExporter.cs`
+- Create: `tests/StarDream.Core.Tests/FbxExportContentTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -1127,7 +1127,7 @@ git commit -m "feat: full fbx export with uvs materials and transforms"
 
 **Files:**
 - Create: `tests/interop/roundtrip.ps1`
-- Modify: `docs/superpowers/specs/2026-10-27-starrysky-mvp-design.md`（记录验证结论）
+- Modify: `docs/superpowers/specs/2026-10-27-stardream-mvp-design.md`（记录验证结论）
 
 **Interfaces:**
 - Consumes: Task 14 的脚本、Task 28 的导出器
@@ -1163,8 +1163,8 @@ git commit -m "test: end-to-end fbx validation against unreal, blender and maya"
 ### Task 30: 收尾打磨
 
 **Files:**
-- Modify: `src/StarrySky.App/MainWindow.xaml`, `MainWindow.xaml.cs`, `ViewportControl.xaml.cs`
-- Create: `src/StarrySky.App/Controls/StatusBar.xaml`
+- Modify: `src/StarDream.App/MainWindow.xaml`, `MainWindow.xaml.cs`, `ViewportControl.xaml.cs`
+- Create: `src/StarDream.App/Controls/StatusBar.xaml`
 
 **Interfaces:**
 - Consumes: 前面所有任务

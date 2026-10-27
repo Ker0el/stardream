@@ -1,5 +1,5 @@
 param(
-    [string]$Exe = "D:\111\src\StarrySky.App\bin\x64\Debug\net8.0-windows10.0.26100.0\StarrySky.App.exe",
+    [string]$Exe = "D:\111\src\StarDream.App\bin\x64\Debug\net8.0-windows10.0.26100.0\StarDream.App.exe",
     [string]$Out = "D:\111\artifacts\capture.png",
     [int]$WaitSeconds = 7
 )

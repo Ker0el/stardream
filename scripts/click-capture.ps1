@@ -19,7 +19,7 @@ public class StarryInput {
 }
 "@
 
-$exe = "D:\111\src\StarrySky.App\bin\x64\Debug\net8.0-windows10.0.26100.0\StarrySky.App.exe"
+$exe = "D:\111\src\StarDream.App\bin\x64\Debug\net8.0-windows10.0.26100.0\StarDream.App.exe"
 $proc = Start-Process -FilePath $exe -PassThru
 Start-Sleep -Seconds $WaitSeconds
 $p = Get-Process -Id $proc.Id

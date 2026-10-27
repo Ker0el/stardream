@@ -5,7 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;using StarrySky.Core.Export;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;using StarrySky.Core.Editing;
+using StarrySky.Core.Export;
 using StarrySky.Core.Math;
 using StarrySky.Core.Scene;
 
@@ -198,10 +200,20 @@ public sealed partial class MainWindow : Window
 
     private void UpdateStatus()
     {
-        var mode = Selected is null ? "无选中" : $"已选中 {Selected.Name}";
+        var mode = ViewportHost.IsEditMode
+            ? $"编辑模式 · {ElementName(ViewportHost.Edit.Selection.Mode)} · 选中 {ViewportHost.Edit.Selection.Count}"
+            : Selected is null ? "无选中" : $"已选中 {Selected.Name}";
+
         StatusText.Text = $"{mode} · {Document.Objects.Count} 个对象 · {Document.TriangleCount} 三角形";
         Title = Document.IsDirty ? "星空 — 未保存*" : "星空";
     }
+
+    private static string ElementName(ElementMode mode) => mode switch
+    {
+        ElementMode.Vertex => "点",
+        ElementMode.Edge => "线",
+        _ => "面",
+    };
 
     private void OnOutlinerSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -262,6 +274,93 @@ public sealed partial class MainWindow : Window
 
         Document.SetVisible(Selected, VisibleCheck.IsChecked == true);
         UpdateStatus();
+    }
+
+    private void OnToggleEditMode(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (!ViewportHost.ToggleEditMode())
+        {
+            StatusText.Text = "先选中一个物体，再按 F8 进入编辑模式";
+            return;
+        }
+
+        UpdateStatus();
+    }
+
+    private void OnVertexMode(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        ViewportHost.SetElementMode(ElementMode.Vertex);
+        UpdateStatus();
+    }
+
+    private void OnEdgeMode(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        ViewportHost.SetElementMode(ElementMode.Edge);
+        UpdateStatus();
+    }
+
+    private void OnFaceMode(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        ViewportHost.SetElementMode(ElementMode.Face);
+        UpdateStatus();
+    }
+
+    private void OnDeleteKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (ViewportHost.IsEditMode && ViewportHost.Edit.Target is not null)
+        {
+            var target = ViewportHost.Edit.Target;
+            MeshEditor.Delete(target.GetMesh(), ViewportHost.Edit.Selection);
+            Document.IsDirty = true;
+            UpdateStatus();
+            return;
+        }
+
+        OnDelete(sender, new RoutedEventArgs());
+    }
+
+    private void OnExtrudeKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (!ViewportHost.IsEditMode || ViewportHost.Edit.Target is null)
+        {
+            return;
+        }
+
+        var target = ViewportHost.Edit.Target;
+        var result = MeshEditor.Extrude(
+            target.GetMesh(), ViewportHost.Edit.Selection, MeshEditor.DefaultExtrudeDistance);
+
+        StatusText.Text = result.Succeeded
+            ? $"已挤出 {result.NewFaceIndices.Count} 个面"
+            : "挤出失败：" + result.Error;
+
+        if (result.Succeeded)
+        {
+            Document.IsDirty = true;
+            UpdateStatus();
+        }
+    }
+
+    private void OnDuplicateKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        OnDuplicate(sender, new RoutedEventArgs());
+    }
+
+    private void OnFrameSelected(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (Selected is null)
+        {
+            return;
+        }
+
+        var mesh = Selected.GetMesh();
+        float radius = 1f;
+        foreach (var position in mesh.Positions)
+        {
+            radius = MathF.Max(radius, position.Length);
+        }
+
+        Document.Camera.Frame(Selected.Position, radius);
     }
 
     private void OnAddCube(object sender, RoutedEventArgs e) => AddPrimitive(PrimitiveParams.Cube());

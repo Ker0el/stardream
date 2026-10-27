@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using StarrySky.Core.Editing;
 using StarrySky.Core.Math;
 using StarrySky.Core.Scene;
 using Vortice.Direct3D;
@@ -26,6 +27,8 @@ public sealed class SceneRenderer : IDisposable
     private readonly LineBatch _grid = new();
     private readonly LineBatch _axes = new();
     private readonly LineBatch _selection = new();
+    private readonly LineBatch _editWire = new();
+    private readonly LineBatch _editPoints = new();
 
     private readonly ID3D11VertexShader _solidVertexShader;
     private readonly ID3D11PixelShader _solidPixelShader;
@@ -169,6 +172,63 @@ public sealed class SceneRenderer : IDisposable
         context.OMSetDepthStencilState(_depthTested);
     }
 
+    /// <summary>Draws the edited object's wires, vertices and the selected elements.</summary>
+    public void DrawEditOverlay(EditState edit, Mat4 viewProjection)
+    {
+        if (!edit.Active || edit.Target is null)
+        {
+            return;
+        }
+
+        var obj = edit.Target;
+        var mesh = obj.GetMesh();
+        var model = obj.LocalMatrix();
+
+        _editWire.Clear();
+        _editPoints.Clear();
+
+        var wire = new Color4(0.42f, 0.45f, 0.5f, 1f);
+        foreach (var edge in mesh.Edges)
+        {
+            _editWire.AddLine(
+                model.TransformPoint(mesh.Positions[edge.A]),
+                model.TransformPoint(mesh.Positions[edge.B]),
+                wire);
+        }
+
+        var selectedVertices = edit.Selection.ResolveVertices(mesh);
+        for (var i = 0; i < mesh.Positions.Count; i++)
+        {
+            var center = model.TransformPoint(mesh.Positions[i]);
+            var size = 0.035f;
+            var color = selectedVertices.Contains(i)
+                ? new Color4(1f, 0.58f, 0.16f, 1f)
+                : new Color4(0.78f, 0.8f, 0.84f, 1f);
+
+            _editPoints.AddLine(center + new Vec3(-size, 0, 0), center + new Vec3(size, 0, 0), color);
+            _editPoints.AddLine(center + new Vec3(0, -size, 0), center + new Vec3(0, size, 0), color);
+            _editPoints.AddLine(center + new Vec3(0, 0, -size), center + new Vec3(0, 0, size), color);
+        }
+
+        var context = _device.Context;
+        UploadLineConstants(context, viewProjection);
+
+        context.IASetInputLayout(_lineInputLayout);
+        context.IASetPrimitiveTopology(PrimitiveTopology.LineList);
+        context.VSSetShader(_lineVertexShader);
+        context.PSSetShader(_linePixelShader);
+        context.VSSetConstantBuffer(0, _constantBuffer);
+        context.OMSetDepthStencilState(_depthDisabled);
+
+        _editWire.Upload(_device.D3DDevice, context);
+        _editWire.Draw(context);
+
+        _editPoints.Upload(_device.D3DDevice, context);
+        _editPoints.Draw(context);
+
+        context.OMSetDepthStencilState(_depthTested);
+    }
+
     public void DrawMeshes(SceneDocument document, Mat4 viewProjection)
     {
         var context = _device.Context;
@@ -281,6 +341,8 @@ public sealed class SceneRenderer : IDisposable
         _grid.Dispose();
         _axes.Dispose();
         _selection.Dispose();
+        _editWire.Dispose();
+        _editPoints.Dispose();
         _depthDisabled.Dispose();
         _depthTested.Dispose();
         _constantBuffer.Dispose();

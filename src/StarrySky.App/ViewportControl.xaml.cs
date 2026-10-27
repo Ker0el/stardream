@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using StarrySky.Core.Cameras;
+using StarrySky.Core.Editing;
 using StarrySky.Core.Math;
 using StarrySky.Core.Picking;
 using StarrySky.Core.Scene;
@@ -44,6 +45,33 @@ public sealed partial class ViewportControl : UserControl
 
     public SceneDocument Document { get; } = new();
     public OrbitCamera Camera => Document.Camera;
+    public EditState Edit { get; } = new();
+    public bool IsEditMode => Edit.Active;
+
+    public bool ToggleEditMode()
+    {
+        if (Edit.Active)
+        {
+            Edit.Leave();
+            return true;
+        }
+
+        if (Document.Selected is null)
+        {
+            return false;
+        }
+
+        Edit.Enter(Document.Selected);
+        return true;
+    }
+
+    public void SetElementMode(ElementMode mode)
+    {
+        if (Edit.Active)
+        {
+            Edit.SwitchMode(mode);
+        }
+    }
 
     public ViewportControl()
     {
@@ -108,7 +136,7 @@ public sealed partial class ViewportControl : UserControl
         {
             var (width, height) = PixelSize();
             _renderer.Resize(width, height);
-            _renderer.Render(Document);
+            _renderer.Render(Document, Edit);
         }
         catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or ObjectDisposedException)
         {
@@ -183,12 +211,77 @@ public sealed partial class ViewportControl : UserControl
         }
 
         var (width, height) = PixelSize();
-        var ray = Camera.ScreenToRay(
-            new Vec2((float)(_pressX * Panel.CompositionScaleX), (float)(_pressY * Panel.CompositionScaleY)),
-            width,
-            height);
+        var screenX = (float)(_pressX * Panel.CompositionScaleX);
+        var screenY = (float)(_pressY * Panel.CompositionScaleY);
 
+        if (Edit.Active && Edit.Target is not null)
+        {
+            PickElement(screenX, screenY, width, height, shift: false);
+            return;
+        }
+
+        var ray = Camera.ScreenToRay(new Vec2(screenX, screenY), width, height);
         Document.Select(RayPicker.PickObject(Document, ray));
+    }
+
+    /// <summary>Picks the element under the cursor for the active element mode.</summary>
+    public void PickElement(float screenX, float screenY, int width, int height, bool shift)
+    {
+        if (!Edit.Active || Edit.Target is null)
+        {
+            return;
+        }
+
+        var aspect = height > 0 ? (float)width / height : 1f;
+        var viewProjection = Camera.GetProjection(aspect) * Camera.GetView();
+        var model = Edit.Target.LocalMatrix();
+        var mesh = Edit.Target.GetMesh();
+        var screen = new Vec2(screenX, screenY);
+        var selection = Edit.Selection;
+
+        if (!shift)
+        {
+            selection.Clear();
+        }
+
+        switch (selection.Mode)
+        {
+            case ElementMode.Vertex:
+                var vertex = ElementPicker.PickVertex(mesh, model, viewProjection, screen, width, height);
+                if (vertex is not null)
+                {
+                    Toggle(selection.Vertices, vertex.Value);
+                }
+
+                break;
+
+            case ElementMode.Edge:
+                var edge = ElementPicker.PickEdge(mesh, model, viewProjection, screen, width, height);
+                if (edge is not null)
+                {
+                    Toggle(selection.Edges, edge.Value);
+                }
+
+                break;
+
+            case ElementMode.Face:
+                var ray = Camera.ScreenToRay(screen, width, height);
+                var face = ElementPicker.PickFace(mesh, model, ray);
+                if (face is not null)
+                {
+                    Toggle(selection.Faces, face.Value);
+                }
+
+                break;
+        }
+    }
+
+    private static void Toggle<T>(HashSet<T> set, T value)
+    {
+        if (!set.Add(value))
+        {
+            set.Remove(value);
+        }
     }
 
     private void OnPointerWheelChanged(object sender, PointerRoutedEventArgs e)

@@ -6,6 +6,16 @@
     Title="星空">
 
     <Grid>
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="F8" Invoked="OnToggleEditMode" />
+            <KeyboardAccelerator Key="F9" Invoked="OnVertexMode" />
+            <KeyboardAccelerator Key="F10" Invoked="OnEdgeMode" />
+            <KeyboardAccelerator Key="F11" Invoked="OnFaceMode" />
+            <KeyboardAccelerator Key="Delete" Invoked="OnDeleteKey" />
+            <KeyboardAccelerator Key="E" Modifiers="Control" Invoked="OnExtrudeKey" />
+            <KeyboardAccelerator Key="D" Modifiers="Control" Invoked="OnDuplicateKey" />
+            <KeyboardAccelerator Key="F" Invoked="OnFrameSelected" />
+        </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />

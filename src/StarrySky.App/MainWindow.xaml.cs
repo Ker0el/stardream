@@ -97,6 +97,7 @@ public sealed partial class MainWindow : Window
         }
 
         File.Delete(AutoSavePath);
+        UpdateStatus();
     }
 
     private SceneDocument Document => ViewportHost.Document;

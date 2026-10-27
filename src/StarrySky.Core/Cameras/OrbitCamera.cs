@@ -46,8 +46,10 @@ public sealed class OrbitCamera
 
         var scale = 2f * Distance * MathF.Tan(FovYDegrees * MathUtil.DegToRad * 0.5f) / viewportHeight;
         var view = GetView();
-        var right = new Vec3(view.M11, view.M21, view.M31);
-        var up = new Vec3(view.M12, view.M22, view.M32);
+
+        // View matrix rows are the camera basis: row 1 = right, row 2 = up.
+        var right = new Vec3(view.M11, view.M12, view.M13);
+        var up = new Vec3(view.M21, view.M22, view.M23);
 
         Target -= right * (dxPixels * scale);
         Target += up * (dyPixels * scale);

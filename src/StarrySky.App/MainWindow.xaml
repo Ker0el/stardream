@@ -14,23 +14,22 @@
 
         <MenuBar Grid.Row="0">
             <MenuBarItem Title="文件">
-                <MenuFlyoutItem Text="新建">
+                <MenuFlyoutItem Text="新建" Click="OnNewScene">
                     <MenuFlyoutItem.KeyboardAccelerators>
                         <KeyboardAccelerator Key="N" Modifiers="Control" />
                     </MenuFlyoutItem.KeyboardAccelerators>
                 </MenuFlyoutItem>
-                <MenuFlyoutItem Text="打开…" />
-                <MenuFlyoutItem Text="保存" />
+                <MenuFlyoutItem Text="打开…" Click="OnOpenScene" />
+                <MenuFlyoutItem Text="保存" Click="OnSaveScene" />
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem Text="导出 FBX…" />
+                <MenuFlyoutItem Text="导出 FBX…" Click="OnExportFbx" />
             </MenuBarItem>
             <MenuBarItem Title="编辑">
-                <MenuFlyoutItem Text="删除" />
-                <MenuFlyoutItem Text="复制" />
+                <MenuFlyoutItem Text="复制" Click="OnDuplicate" />
+                <MenuFlyoutItem Text="删除" Click="OnDelete" />
             </MenuBarItem>
             <MenuBarItem Title="视图">
-                <MenuFlyoutItem Text="线框" />
-                <MenuFlyoutItem Text="着色" />
+                <MenuFlyoutItem Text="全览" Click="OnFrameAll" />
             </MenuBarItem>
             <MenuBarItem Title="帮助">
                 <MenuFlyoutItem Text="关于星空" />
@@ -49,11 +48,10 @@
                 Padding="4,8"
                 Spacing="4"
                 Background="#CC16171A">
-                <Button Width="36" Height="36" Content="➤" ToolTipService.ToolTip="选择（Q）" />
-                <Button Width="36" Height="36" Content="✥" ToolTipService.ToolTip="移动（W）" />
-                <Button Width="36" Height="36" Content="⟳" ToolTipService.ToolTip="旋转（E）" />
-                <Button Width="36" Height="36" Content="⤢" ToolTipService.ToolTip="缩放（R）" />
-                <Button Width="36" Height="36" Content="＋" ToolTipService.ToolTip="添加基本体" />
+                <Button Width="36" Height="36" Content="➕" ToolTipService.ToolTip="添加立方体" Click="OnAddCube" />
+                <Button Width="36" Height="36" Content="●" ToolTipService.ToolTip="添加球体" Click="OnAddSphere" />
+                <Button Width="36" Height="36" Content="⬭" ToolTipService.ToolTip="添加圆柱" Click="OnAddCylinder" />
+                <Button Width="36" Height="36" Content="▪" ToolTipService.ToolTip="添加平面" Click="OnAddPlane" />
             </StackPanel>
 
             <local:ViewportControl
@@ -72,18 +70,71 @@
                     Margin="12,12,12,4"
                     FontWeight="SemiBold"
                     Text="大纲" />
-                <ListView Grid.Row="0" Margin="8,36,8,8" />
+                <ListView
+                    x:Name="OutlinerList"
+                    Grid.Row="0"
+                    Margin="8,36,8,8"
+                    SelectionChanged="OnOutlinerSelectionChanged" />
 
                 <Rectangle
                     Grid.Row="1"
                     Height="1"
                     Fill="#33FFFFFF" />
 
-                <TextBlock
+                <ScrollViewer
                     Grid.Row="2"
-                    Margin="12,12,12,4"
-                    FontWeight="SemiBold"
-                    Text="属性" />
+                    Margin="12,8,12,12">
+                    <StackPanel Spacing="6">
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontWeight="SemiBold"
+                            Text="属性" />
+
+                        <TextBlock FontSize="12" Opacity="0.6" Text="名称" />
+                        <TextBox x:Name="NameBox" TextChanged="OnPropertyEdited" />
+
+                        <TextBlock FontSize="12" Opacity="0.6" Text="位置" />
+                        <Grid ColumnSpacing="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <NumberBox x:Name="PosX" Grid.Column="0" SmallChange="0.1" ValueChanged="OnNumberChanged" />
+                            <NumberBox x:Name="PosY" Grid.Column="1" SmallChange="0.1" ValueChanged="OnNumberChanged" />
+                            <NumberBox x:Name="PosZ" Grid.Column="2" SmallChange="0.1" ValueChanged="OnNumberChanged" />
+                        </Grid>
+
+                        <TextBlock FontSize="12" Opacity="0.6" Text="旋转" />
+                        <Grid ColumnSpacing="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <NumberBox x:Name="RotX" Grid.Column="0" SmallChange="1" ValueChanged="OnNumberChanged" />
+                            <NumberBox x:Name="RotY" Grid.Column="1" SmallChange="1" ValueChanged="OnNumberChanged" />
+                            <NumberBox x:Name="RotZ" Grid.Column="2" SmallChange="1" ValueChanged="OnNumberChanged" />
+                        </Grid>
+
+                        <TextBlock FontSize="12" Opacity="0.6" Text="缩放" />
+                        <Grid ColumnSpacing="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <NumberBox x:Name="ScaleX" Grid.Column="0" SmallChange="0.1" ValueChanged="OnNumberChanged" />
+                            <NumberBox x:Name="ScaleY" Grid.Column="1" SmallChange="0.1" ValueChanged="OnNumberChanged" />
+                            <NumberBox x:Name="ScaleZ" Grid.Column="2" SmallChange="0.1" ValueChanged="OnNumberChanged" />
+                        </Grid>
+
+                        <TextBlock FontSize="12" Opacity="0.6" Text="颜色" />
+                        <TextBox x:Name="ColorBox" PlaceholderText="#C8C8C8" TextChanged="OnPropertyEdited" />
+
+                        <CheckBox x:Name="VisibleCheck" Content="可见" Click="OnVisibleToggled" />
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
         </Grid>
 

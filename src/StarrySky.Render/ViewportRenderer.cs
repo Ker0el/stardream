@@ -127,6 +127,7 @@ public sealed class ViewportRenderer : IDisposable
         context.ClearRenderTargetView(_renderTarget, ClearColor);
         context.ClearDepthStencilView(_depthView, DepthStencilClearFlags.Depth, 1f, 0);
         _sceneRenderer.DrawMeshes(document, viewProjection);
+        _sceneRenderer.DrawSelectionWires(document, viewProjection);
         _sceneRenderer.DrawGrid(viewProjection);
         _sceneRenderer.DrawAxes(viewProjection);
         _swapChain.Present(1, PresentFlags.None);

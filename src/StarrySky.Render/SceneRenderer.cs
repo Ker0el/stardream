@@ -25,6 +25,7 @@ public sealed class SceneRenderer : IDisposable
     private readonly ID3D11RasterizerState _rasterizer;
     private readonly LineBatch _grid = new();
     private readonly LineBatch _axes = new();
+    private readonly LineBatch _selection = new();
 
     private readonly ID3D11VertexShader _solidVertexShader;
     private readonly ID3D11PixelShader _solidPixelShader;
@@ -130,6 +131,41 @@ public sealed class SceneRenderer : IDisposable
         context.OMSetDepthStencilState(_depthDisabled);
         _axes.Upload(_device.D3DDevice, context);
         _axes.Draw(context);
+        context.OMSetDepthStencilState(_depthTested);
+    }
+
+    /// <summary>Draws the selected object's edges in orange, ignoring depth.</summary>
+    public void DrawSelectionWires(SceneDocument document, Mat4 viewProjection)
+    {
+        if (document.Selected is null)
+        {
+            return;
+        }
+
+        var obj = document.Selected;
+        var mesh = obj.GetMesh();
+        var model = obj.LocalMatrix();
+
+        _selection.Clear();
+        foreach (var edge in mesh.Edges)
+        {
+            var a = model.TransformPoint(mesh.Positions[edge.A]);
+            var b = model.TransformPoint(mesh.Positions[edge.B]);
+            _selection.AddLine(a, b, new Color4(1f, 0.58f, 0.16f, 1f));
+        }
+
+        var context = _device.Context;
+        UploadLineConstants(context, viewProjection);
+
+        context.IASetInputLayout(_lineInputLayout);
+        context.IASetPrimitiveTopology(PrimitiveTopology.LineList);
+        context.VSSetShader(_lineVertexShader);
+        context.PSSetShader(_linePixelShader);
+        context.VSSetConstantBuffer(0, _constantBuffer);
+
+        context.OMSetDepthStencilState(_depthDisabled);
+        _selection.Upload(_device.D3DDevice, context);
+        _selection.Draw(context);
         context.OMSetDepthStencilState(_depthTested);
     }
 
@@ -244,6 +280,7 @@ public sealed class SceneRenderer : IDisposable
         _solidVertexShader.Dispose();
         _grid.Dispose();
         _axes.Dispose();
+        _selection.Dispose();
         _depthDisabled.Dispose();
         _depthTested.Dispose();
         _constantBuffer.Dispose();

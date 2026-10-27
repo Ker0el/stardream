@@ -1,3 +1,4 @@
+using System;
 using StarrySky.Core.Cameras;
 using StarrySky.Core.Math;
 using Xunit;
@@ -39,6 +40,33 @@ public class OrbitCameraTests
         Assert.True(camera.Distance > 2f);
         var expected = 2f / MathF.Sin(22.5f * MathUtil.DegToRad);
         Assert.Equal(expected, camera.Distance, 1);
+    }
+
+    [Fact]
+    public void Pan_Moves_Target_Along_Camera_Right_Only()
+    {
+        var camera = new OrbitCamera();
+        var before = camera.Target;
+        var view = camera.GetView();
+        var right = new Vec3(view.M11, view.M12, view.M13);
+
+        camera.Pan(100f, 0f, 600);
+
+        var delta = camera.Target - before;
+        Assert.True(Vec3.Dot(delta, right) < 0f, "dragging right must move the target left along camera right");
+        Assert.True(MathF.Abs(delta.Y) < 1e-3f, "a horizontal pan must not move the target vertically");
+    }
+
+    [Fact]
+    public void Pan_Down_Moves_Target_Up()
+    {
+        var camera = new OrbitCamera();
+        var before = camera.Target;
+
+        camera.Pan(0f, 100f, 600);
+
+        var delta = camera.Target - before;
+        Assert.True(delta.Y > 0f, "dragging down must move the target up");
     }
 
     [Fact]

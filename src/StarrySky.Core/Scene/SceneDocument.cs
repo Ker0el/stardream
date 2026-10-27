@@ -48,6 +48,15 @@ public sealed class SceneDocument
         return clone;
     }
 
+    /// <summary>Adds an object built elsewhere, e.g. pasted from the clipboard.</summary>
+    public SceneObject Add(SceneObject obj)
+    {
+        Objects.Add(obj);
+        IsDirty = true;
+        Select(obj);
+        return obj;
+    }
+
     public void Remove(SceneObject obj)
     {
         if (Objects.Remove(obj))

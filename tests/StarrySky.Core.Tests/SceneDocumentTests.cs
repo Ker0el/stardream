@@ -84,6 +84,19 @@ public class SceneDocumentTests
     }
 
     [Fact]
+    public void Add_Puts_An_Externally_Built_Object_Into_The_Document()
+    {
+        var document = new SceneDocument();
+        var pasted = SceneObject.FromPrimitive(PrimitiveParams.Sphere(), "粘贴的球");
+
+        document.Add(pasted);
+
+        Assert.Single(document.Objects);
+        Assert.Same(pasted, document.Selected);
+        Assert.True(document.IsDirty);
+    }
+
+    [Fact]
     public void ColorHex_Parses_To_Linear_Components()
     {
         var obj = SceneObject.FromPrimitive(PrimitiveParams.Cube(), "c");

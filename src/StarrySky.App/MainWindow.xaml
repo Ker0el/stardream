@@ -39,7 +39,23 @@
                 <MenuFlyoutItem Text="导出 FBX…" Click="OnExportFbx" />
             </MenuBarItem>
             <MenuBarItem Title="编辑">
-                <MenuFlyoutItem Text="复制" Click="OnDuplicate" />
+                <MenuFlyoutItem Text="剪切" Click="OnCut">
+                    <MenuFlyoutItem.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="X" Modifiers="Control" />
+                    </MenuFlyoutItem.KeyboardAccelerators>
+                </MenuFlyoutItem>
+                <MenuFlyoutItem Text="复制" Click="OnCopy">
+                    <MenuFlyoutItem.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="C" Modifiers="Control" />
+                    </MenuFlyoutItem.KeyboardAccelerators>
+                </MenuFlyoutItem>
+                <MenuFlyoutItem Text="粘贴" Click="OnPaste">
+                    <MenuFlyoutItem.KeyboardAccelerators>
+                        <KeyboardAccelerator Key="V" Modifiers="Control" />
+                    </MenuFlyoutItem.KeyboardAccelerators>
+                </MenuFlyoutItem>
+                <MenuFlyoutItem Text="再制一份" Click="OnDuplicate" />
+                <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="删除" Click="OnDelete" />
             </MenuBarItem>
             <MenuBarItem Title="视图">

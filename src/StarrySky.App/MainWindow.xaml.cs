@@ -17,6 +17,7 @@ public sealed partial class MainWindow : Window
 {
     private bool _syncing;
     private bool _recoveryChecked;
+    private SceneObject? _clipboard;
     private readonly DispatcherTimer _autoSaveTimer = new() { Interval = TimeSpan.FromSeconds(30) };
 
     private static string AutoSavePath => Path.Combine(
@@ -415,6 +416,46 @@ public sealed partial class MainWindow : Window
     {
         Document.AddPrimitive(parameters);
         UpdateStatus();
+    }
+
+    private void OnCut(object sender, RoutedEventArgs e)
+    {
+        if (Selected is null)
+        {
+            return;
+        }
+
+        _clipboard = Selected.CloneWithNewId();
+        Document.Remove(Selected);
+        UpdateStatus();
+        StatusText.Text = $"已剪切 {_clipboard.Name}，Ctrl+V 粘贴";
+    }
+
+    private void OnCopy(object sender, RoutedEventArgs e)
+    {
+        if (Selected is null)
+        {
+            return;
+        }
+
+        _clipboard = Selected.CloneWithNewId();
+        StatusText.Text = $"已复制 {_clipboard.Name}，Ctrl+V 粘贴";
+    }
+
+    private void OnPaste(object sender, RoutedEventArgs e)
+    {
+        if (_clipboard is null)
+        {
+            StatusText.Text = "剪贴板是空的";
+            return;
+        }
+
+        var copy = _clipboard.CloneWithNewId();
+        copy.Name = _clipboard.Name;
+        copy.Position = copy.Position + new Vec3(0.5f, 0f, 0f);
+        Document.Add(copy);
+        UpdateStatus();
+        StatusText.Text = $"已粘贴 {copy.Name}";
     }
 
     private void OnDuplicate(object sender, RoutedEventArgs e)

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
-using StarrySky.Core.Export;
+using Microsoft.UI.Xaml.Media;using StarrySky.Core.Export;
 using StarrySky.Core.Math;
 using StarrySky.Core.Scene;
 
@@ -14,6 +14,13 @@ namespace StarrySky.App;
 public sealed partial class MainWindow : Window
 {
     private bool _syncing;
+    private bool _recoveryChecked;
+    private readonly DispatcherTimer _autoSaveTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+
+    private static string AutoSavePath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "StarrySky",
+        "autosave.skyscene");
 
     public MainWindow()
     {
@@ -21,6 +28,73 @@ public sealed partial class MainWindow : Window
         SystemBackdrop = new DesktopAcrylicBackdrop();
         LoadDemoScene();
         ViewportHost.Document.SelectionChanged += OnSelectionChanged;
+
+        _autoSaveTimer.Tick += OnAutoSaveTick;
+        _autoSaveTimer.Start();
+        Activated += OnFirstActivated;
+    }
+
+    private void OnAutoSaveTick(object? sender, object e)
+    {
+        if (!Document.IsDirty)
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(AutoSavePath)!);
+            File.WriteAllText(AutoSavePath, SceneSerializer.Save(Document));
+        }
+        catch (IOException)
+        {
+            // A failed draft write must never interrupt editing.
+        }
+    }
+
+    private async void OnFirstActivated(object sender, WindowActivatedEventArgs args)
+    {
+        if (_recoveryChecked)
+        {
+            return;
+        }
+
+        _recoveryChecked = true;
+        Activated -= OnFirstActivated;
+
+        if (!File.Exists(AutoSavePath))
+        {
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Content.XamlRoot,
+            Title = "发现未保存的内容",
+            Content = "上次退出前有未保存的修改，要恢复吗？",
+            PrimaryButtonText = "恢复",
+            CloseButtonText = "丢弃",
+            DefaultButton = ContentDialogButton.Primary,
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            try
+            {
+                SceneSerializer.LoadInto(Document, File.ReadAllText(AutoSavePath));
+                Document.IsDirty = true;
+                RefreshOutliner();
+                RefreshProperties();
+                UpdateStatus();
+            }
+            catch (SceneLoadException)
+            {
+                StatusText.Text = "草稿文件已损坏，无法恢复";
+            }
+        }
+
+        File.Delete(AutoSavePath);
     }
 
     private SceneDocument Document => ViewportHost.Document;
@@ -235,14 +309,77 @@ public sealed partial class MainWindow : Window
         UpdateStatus();
     }
 
-    private void OnOpenScene(object sender, RoutedEventArgs e)
+    private async void OnOpenScene(object sender, RoutedEventArgs e)
     {
-        StatusText.Text = "打开功能在下一阶段接入";
+        var picker = new Windows.Storage.Pickers.FileOpenPicker();
+        WinRT.Interop.InitializeWithWindow.Initialize(
+            picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        picker.FileTypeFilter.Add(".skyscene");
+
+        var file = await picker.PickSingleFileAsync();
+        if (file is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(file.Path);
+            SceneSerializer.LoadInto(Document, json);
+            Document.FilePath = file.Path;
+            RefreshOutliner();
+            RefreshProperties();
+            UpdateStatus();
+            StatusText.Text = $"已打开 {Path.GetFileName(file.Path)}";
+        }
+        catch (SceneLoadException ex)
+        {
+            StatusText.Text = "打开失败：" + ex.Message;
+        }
+        catch (IOException ex)
+        {
+            StatusText.Text = "读取失败：" + ex.Message;
+        }
     }
 
-    private void OnSaveScene(object sender, RoutedEventArgs e)
+    private async void OnSaveScene(object sender, RoutedEventArgs e)
     {
-        StatusText.Text = "保存功能在下一阶段接入";
+        var path = Document.FilePath;
+
+        if (string.IsNullOrEmpty(path))
+        {
+            var picker = new Windows.Storage.Pickers.FileSavePicker();
+            WinRT.Interop.InitializeWithWindow.Initialize(
+                picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+            picker.FileTypeChoices.Add("星空场景", new List<string> { ".skyscene" });
+            picker.SuggestedFileName = "场景";
+
+            var file = await picker.PickSaveFileAsync();
+            if (file is null)
+            {
+                return;
+            }
+
+            path = file.Path;
+        }
+
+        try
+        {
+            await File.WriteAllTextAsync(path, SceneSerializer.Save(Document));
+            Document.FilePath = path;
+            Document.IsDirty = false;
+            UpdateStatus();
+            StatusText.Text = $"已保存 {Path.GetFileName(path)}";
+
+            if (File.Exists(AutoSavePath))
+            {
+                File.Delete(AutoSavePath);
+            }
+        }
+        catch (IOException ex)
+        {
+            StatusText.Text = "保存失败：" + ex.Message;
+        }
     }
 
     private async void OnExportFbx(object sender, RoutedEventArgs e)

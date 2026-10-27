@@ -37,6 +37,16 @@ public sealed class SceneObject
         return obj;
     }
 
+    /// <summary>Recreates an object that was loaded from a baked mesh.</summary>
+    public static SceneObject FromBaked(Mesh mesh, string name)
+    {
+        return new SceneObject
+        {
+            Name = name,
+            Baked = mesh,
+        };
+    }
+
     public Mesh GetMesh()
     {
         if (Baked is not null)

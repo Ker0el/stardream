@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\native\bin\x64\StarrySky.FbxNative.dll" Link="StarrySky.FbxNative.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\native\bin\x64\StarrySky.FbxNative.dll')" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\StarrySky.Core\StarrySky.Core.csproj" />
     <ProjectReference Include="..\StarrySky.Render\StarrySky.Render.csproj" />
   </ItemGroup>

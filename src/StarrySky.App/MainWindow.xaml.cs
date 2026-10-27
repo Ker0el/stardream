@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
-using StarrySky.Core.Math;
 using StarrySky.Core.Scene;
+using StarrySky.Core.Math;
 
 namespace StarrySky.App;
 
@@ -11,31 +11,28 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         SystemBackdrop = new DesktopAcrylicBackdrop();
-        PopulateDemoScene();
+        LoadDemoScene();
     }
 
     /// <summary>Temporary content until objects can be added from the toolbar.</summary>
-    private void PopulateDemoScene()
+    private void LoadDemoScene()
     {
+        var demo = DemoScene.Create();
         var document = ViewportHost.Document;
 
-        var cube = document.AddPrimitive(PrimitiveParams.Cube());
-        cube.Position = new Vec3(-2f, 0.5f, 0f);
-        cube.ColorHex = "#C9C9CE";
-
-        var sphere = document.AddPrimitive(PrimitiveParams.Sphere());
-        sphere.Position = new Vec3(0f, 0.5f, 0f);
-        sphere.ColorHex = "#B9C6D8";
-
-        var cylinder = document.AddPrimitive(PrimitiveParams.Cylinder());
-        cylinder.Position = new Vec3(2f, 0.5f, 0f);
-        cylinder.ColorHex = "#CDBBA0";
-
-        var plane = document.AddPrimitive(PrimitiveParams.Plane(6f, 4f));
-        plane.Position = new Vec3(0f, 0f, 2.5f);
-        plane.ColorHex = "#9FA6B0";
+        foreach (var source in demo.Objects)
+        {
+            var target = document.AddPrimitive(source.Primitive ?? PrimitiveParams.Cube());
+            target.Position = source.Position;
+            target.ColorHex = source.ColorHex;
+            target.Name = source.Name;
+        }
 
         document.Select(null);
+        document.Camera.Target = new Vec3(0f, 0.5f, 0f);
+        document.Camera.Yaw = 0.6f;
+        document.Camera.Pitch = 0.4f;
+        document.Camera.Distance = 12f;
         document.IsDirty = false;
     }
 }

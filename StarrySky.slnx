@@ -9,4 +9,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/StarrySky.Core.Tests/StarrySky.Core.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/StarrySky.Tools/StarrySky.Tools.csproj" />
+  </Folder>
 </Solution>

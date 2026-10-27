@@ -22,6 +22,13 @@ internal static class FbxNative
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    internal struct Vec2
+    {
+        public double X;
+        public double Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal readonly struct Id
     {
         public readonly ulong Value;
@@ -82,6 +89,37 @@ internal static class FbxNative
 
     [DllImport(Dll, ExactSpelling = true)]
     internal static extern void ufbxw_mesh_set_triangles(IntPtr scene, Id mesh, Id indices);
+
+    /// <summary>ufbxw_attribute_mapping::UFBXW_ATTRIBUTE_MAPPING_POLYGON_VERTEX.</summary>
+    internal const int MappingPolygonVertex = 1;
+
+    [DllImport(Dll, ExactSpelling = true)]
+    internal static extern void ufbxw_mesh_set_normals(IntPtr scene, Id mesh, Id normals, int mapping);
+
+    [DllImport(Dll, ExactSpelling = true)]
+    internal static extern void ufbxw_mesh_set_uvs(IntPtr scene, Id mesh, int set, Id uvs, int mapping);
+
+    [DllImport(Dll, ExactSpelling = true)]
+    internal static extern Id ufbxw_view_vec2_array(IntPtr scene, IntPtr data, UIntPtr count);
+
+    // ufbxw_material_type: LAMBERT=0, PHONG=1, CUSTOM=2
+    internal const int MaterialPhong = 1;
+
+    // ufbxw_prop_type::UFBXW_PROP_TYPE_COLOR
+    internal const int PropTypeColor = 14;
+
+    [DllImport(Dll, ExactSpelling = true)]
+    internal static extern Id ufbxw_create_material(IntPtr scene, int type);
+
+    [DllImport(Dll, ExactSpelling = true)]
+    internal static extern void ufbxw_add_vec3(
+        IntPtr scene, Id id, [MarshalAs(UnmanagedType.LPUTF8Str)] string prop, int type, Vec3 value);
+
+    [DllImport(Dll, ExactSpelling = true)]
+    internal static extern void ufbxw_node_set_material(IntPtr scene, Id node, UIntPtr index, Id material);
+
+    [DllImport(Dll, ExactSpelling = true)]
+    internal static extern void ufbxw_mesh_set_single_material(IntPtr scene, Id mesh, int materialIndex);
 
     [DllImport(Dll, ExactSpelling = true)]
     internal static extern void ufbxw_prepare_scene(IntPtr scene, IntPtr opts);

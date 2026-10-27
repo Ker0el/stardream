@@ -64,7 +64,11 @@ FBX 导出用的是 [ufbx-write](https://github.com/ufbx/ufbx-write)（MIT / 公
 
 ## 许可证
 
-[MIT](LICENSE)。第三方组件许可见 `LICENSE` 末尾与 `native/README.md`。
+本项目采用 [MIT](LICENSE)。
+
+第三方组件：
+- [ufbx-write](https://github.com/ufbx/ufbx-write)：MIT 或公有领域（任选其一），源码锁在 `native/StarDream.FbxNative` 的固定 commit，许可见 `ufbx_write.h` 末尾。
+- Vortice.Windows、CommunityToolkit.WinUI、xUnit：各自原有许可。
 
 ## 项目结构
 

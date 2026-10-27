@@ -435,6 +435,18 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OnToggleVisibleFromOutliner(object sender, RoutedEventArgs e)
+    {
+        if (Selected is null)
+        {
+            return;
+        }
+
+        Document.SetVisible(Selected, !Selected.Visible);
+        RefreshProperties();
+        UpdateStatus();
+    }
+
     private void OnFrameAll(object sender, RoutedEventArgs e)
     {
         Document.Camera.Frame(new Vec3(0f, 0.5f, 0f), 4f);

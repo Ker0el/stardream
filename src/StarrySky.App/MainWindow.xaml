@@ -88,7 +88,16 @@
                     x:Name="OutlinerList"
                     Grid.Row="0"
                     Margin="8,36,8,8"
-                    SelectionChanged="OnOutlinerSelectionChanged" />
+                    SelectionChanged="OnOutlinerSelectionChanged">
+                    <ListView.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="复制" Click="OnDuplicate" />
+                            <MenuFlyoutItem Text="隐藏 / 显示" Click="OnToggleVisibleFromOutliner" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="删除" Click="OnDelete" />
+                        </MenuFlyout>
+                    </ListView.ContextFlyout>
+                </ListView>
 
                 <Rectangle
                     Grid.Row="1"

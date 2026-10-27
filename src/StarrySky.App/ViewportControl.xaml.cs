@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using StarrySky.Core.Cameras;
+using StarrySky.Core.Scene;
 using StarrySky.Render;
 
 namespace StarrySky.App;
@@ -22,7 +23,8 @@ public sealed partial class ViewportControl : UserControl
     private ViewportRenderer? _renderer;
     private bool _renderingHooked;
 
-    public OrbitCamera Camera { get; } = new();
+    public SceneDocument Document { get; } = new();
+    public OrbitCamera Camera => Document.Camera;
 
     public ViewportControl()
     {
@@ -81,8 +83,7 @@ public sealed partial class ViewportControl : UserControl
 
         var (width, height) = PixelSize();
         _renderer.Resize(width, height);
-        var aspect = height > 0 ? (float)width / height : 1f;
-        _renderer.Render(Camera.GetView(), Camera.GetProjection(aspect));
+        _renderer.Render(Document);
     }
 
     private void OnPanelSizeChanged(object sender, SizeChangedEventArgs e)

@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using StarrySky.Core.Math;
+using StarrySky.Core.Scene;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
@@ -8,7 +9,7 @@ using Vortice.Mathematics;
 
 namespace StarrySky.Render;
 
-/// <summary>Draws the ground grid and the world axes.</summary>
+/// <summary>Draws the ground grid, the world axes and every visible scene object.</summary>
 public sealed class SceneRenderer : IDisposable
 {
     private const float GridExtent = 10f;
@@ -21,8 +22,15 @@ public sealed class SceneRenderer : IDisposable
     private readonly ID3D11Buffer _constantBuffer;
     private readonly ID3D11DepthStencilState _depthTested;
     private readonly ID3D11DepthStencilState _depthDisabled;
+    private readonly ID3D11RasterizerState _rasterizer;
     private readonly LineBatch _grid = new();
     private readonly LineBatch _axes = new();
+
+    private readonly ID3D11VertexShader _solidVertexShader;
+    private readonly ID3D11PixelShader _solidPixelShader;
+    private readonly ID3D11InputLayout _solidInputLayout;
+    private readonly ID3D11Buffer _solidConstants;
+    private readonly MeshBuffers _meshBuffers = new();
 
     private static readonly Color4 GridColor = new(0.21f, 0.22f, 0.24f, 1f);
     private static readonly Color4 GridCenterColor = new(0.33f, 0.34f, 0.37f, 1f);
@@ -32,7 +40,7 @@ public sealed class SceneRenderer : IDisposable
         _device = device;
 
         _lineVertexShader = ShaderLibrary.CreateVertexShader(
-            device.D3DDevice, "StarrySky.Render.Shaders.line.hlsl", "VSMain", out var bytecode);
+            device.D3DDevice, "StarrySky.Render.Shaders.line.hlsl", "VSMain", out var lineBytecode);
         _linePixelShader = ShaderLibrary.CreatePixelShader(
             device.D3DDevice, "StarrySky.Render.Shaders.line.hlsl", "PSMain");
 
@@ -42,10 +50,26 @@ public sealed class SceneRenderer : IDisposable
                 new InputElementDescription("POSITION", 0, Format.R32G32B32_Float, 0, 0),
                 new InputElementDescription("COLOR", 0, Format.R32G32B32A32_Float, 12, 0),
             },
-            bytecode);
+            lineBytecode);
 
         _constantBuffer = device.D3DDevice.CreateBuffer(new BufferDescription(
             64, BindFlags.ConstantBuffer, ResourceUsage.Dynamic, CpuAccessFlags.Write));
+
+        _solidVertexShader = ShaderLibrary.CreateVertexShader(
+            device.D3DDevice, "StarrySky.Render.Shaders.solid.hlsl", "VSMain", out var solidBytecode);
+        _solidPixelShader = ShaderLibrary.CreatePixelShader(
+            device.D3DDevice, "StarrySky.Render.Shaders.solid.hlsl", "PSMain");
+
+        _solidInputLayout = device.D3DDevice.CreateInputLayout(
+            new[]
+            {
+                new InputElementDescription("POSITION", 0, Format.R32G32B32_Float, 0, 0),
+                new InputElementDescription("NORMAL", 0, Format.R32G32B32_Float, 12, 0),
+            },
+            solidBytecode);
+
+        _solidConstants = device.D3DDevice.CreateBuffer(new BufferDescription(
+            144, BindFlags.ConstantBuffer, ResourceUsage.Dynamic, CpuAccessFlags.Write));
 
         _depthTested = device.D3DDevice.CreateDepthStencilState(new DepthStencilDescription
         {
@@ -60,6 +84,13 @@ public sealed class SceneRenderer : IDisposable
             DepthWriteMask = DepthWriteMask.Zero,
             DepthFunc = ComparisonFunction.Always,
         });
+
+        _rasterizer = device.D3DDevice.CreateRasterizerState(new RasterizerDescription
+        {
+            CullMode = CullMode.None,
+            FillMode = FillMode.Solid,
+            DepthClipEnable = true,
+        });
     }
 
     public void DrawGrid(Mat4 viewProjection)
@@ -67,9 +98,8 @@ public sealed class SceneRenderer : IDisposable
         _grid.Clear();
         BuildGrid();
 
-
         var context = _device.Context;
-        UploadConstants(context, viewProjection);
+        UploadLineConstants(context, viewProjection);
 
         context.IASetInputLayout(_lineInputLayout);
         context.IASetPrimitiveTopology(PrimitiveTopology.LineList);
@@ -88,9 +118,8 @@ public sealed class SceneRenderer : IDisposable
         _axes.Clear();
         BuildAxes();
 
-
         var context = _device.Context;
-        UploadConstants(context, viewProjection);
+        UploadLineConstants(context, viewProjection);
 
         context.IASetInputLayout(_lineInputLayout);
         context.IASetPrimitiveTopology(PrimitiveTopology.LineList);
@@ -104,24 +133,37 @@ public sealed class SceneRenderer : IDisposable
         context.OMSetDepthStencilState(_depthTested);
     }
 
-    private static int _diagCount;
-
-    private static void Diag(string message)
+    public void DrawMeshes(SceneDocument document, Mat4 viewProjection)
     {
-        if (_diagCount >= 6)
-        {
-            return;
-        }
+        var context = _device.Context;
 
-        _diagCount++;
-        try
+        context.IASetInputLayout(_solidInputLayout);
+        context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+        context.VSSetShader(_solidVertexShader);
+        context.PSSetShader(_solidPixelShader);
+        context.VSSetConstantBuffer(0, _solidConstants);
+        context.PSSetConstantBuffer(0, _solidConstants);
+        context.OMSetDepthStencilState(_depthTested);
+        context.RSSetState(_rasterizer);
+
+        foreach (var obj in document.Objects)
         {
-            System.IO.File.AppendAllText(
-                System.IO.Path.Combine(System.IO.Path.GetTempPath(), "starrysky-diag.txt"),
-                message + Environment.NewLine);
-        }
-        catch (System.IO.IOException)
-        {
+            if (!obj.Visible)
+            {
+                continue;
+            }
+
+            var mesh = obj.GetMesh();
+            if (mesh.Triangles.Count == 0)
+            {
+                continue;
+            }
+
+            var buffer = _meshBuffers.GetBuffer(_device.D3DDevice, mesh, out var vertexCount);
+            UploadSolidConstants(context, obj.LocalMatrix(), viewProjection, obj.Color);
+
+            context.IASetVertexBuffer(0, buffer, MeshBuffers.Stride);
+            context.Draw(vertexCount, 0);
         }
     }
 
@@ -143,7 +185,7 @@ public sealed class SceneRenderer : IDisposable
         _axes.AddLine(Vec3.Zero, new Vec3(0, 0, length), new Color4(0.25f, 0.55f, 1f, 1f));
     }
 
-    private void UploadConstants(ID3D11DeviceContext context, Mat4 m)
+    private void UploadLineConstants(ID3D11DeviceContext context, Mat4 m)
     {
         var data = new float[16]
         {
@@ -164,8 +206,42 @@ public sealed class SceneRenderer : IDisposable
         }
     }
 
+    private void UploadSolidConstants(ID3D11DeviceContext context, Mat4 world, Mat4 viewProjection, Vec3 color)
+    {
+        var data = new float[36]
+        {
+            world.M11, world.M12, world.M13, world.M14,
+            world.M21, world.M22, world.M23, world.M24,
+            world.M31, world.M32, world.M33, world.M34,
+            world.M41, world.M42, world.M43, world.M44,
+
+            viewProjection.M11, viewProjection.M12, viewProjection.M13, viewProjection.M14,
+            viewProjection.M21, viewProjection.M22, viewProjection.M23, viewProjection.M24,
+            viewProjection.M31, viewProjection.M32, viewProjection.M33, viewProjection.M34,
+            viewProjection.M41, viewProjection.M42, viewProjection.M43, viewProjection.M44,
+
+            color.X, color.Y, color.Z, 1f,
+        };
+
+        var mapped = context.Map(_solidConstants, 0, MapMode.WriteDiscard, Vortice.Direct3D11.MapFlags.None);
+        try
+        {
+            Marshal.Copy(data, 0, mapped.DataPointer, data.Length);
+        }
+        finally
+        {
+            context.Unmap(_solidConstants, 0);
+        }
+    }
+
     public void Dispose()
     {
+        _meshBuffers.Dispose();
+        _rasterizer.Dispose();
+        _solidConstants.Dispose();
+        _solidInputLayout.Dispose();
+        _solidPixelShader.Dispose();
+        _solidVertexShader.Dispose();
         _grid.Dispose();
         _axes.Dispose();
         _depthDisabled.Dispose();

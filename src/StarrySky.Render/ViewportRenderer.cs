@@ -1,4 +1,5 @@
 ﻿using StarrySky.Core.Math;
+using StarrySky.Core.Scene;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
@@ -108,20 +109,26 @@ public sealed class ViewportRenderer : IDisposable
         _swapChain!.ResizeBuffers(2, (uint)pixelWidth, (uint)pixelHeight, Format.B8G8R8A8_UNorm, SwapChainFlags.None);
     }
 
-    public void Render(Mat4 view, Mat4 projection)
+    public void Render(SceneDocument document)
     {
         if (_swapChain is null || _renderTarget is null || _depthView is null)
         {
             return;
         }
 
+        var aspect = _height > 0 ? (float)_width / _height : 1f;
+        var view = document.Camera.GetView();
+        var projection = document.Camera.GetProjection(aspect);
+        var viewProjection = projection * view;
+
         var context = _device.Context;
         context.RSSetViewport(new Viewport(0f, 0f, _width, _height, 0f, 1f));
         context.OMSetRenderTargets(_renderTarget, _depthView);
         context.ClearRenderTargetView(_renderTarget, ClearColor);
         context.ClearDepthStencilView(_depthView, DepthStencilClearFlags.Depth, 1f, 0);
-        _sceneRenderer.DrawGrid(projection * view);
-        _sceneRenderer.DrawAxes(projection * view);
+        _sceneRenderer.DrawMeshes(document, viewProjection);
+        _sceneRenderer.DrawGrid(viewProjection);
+        _sceneRenderer.DrawAxes(viewProjection);
         _swapChain.Present(1, PresentFlags.None);
     }
 

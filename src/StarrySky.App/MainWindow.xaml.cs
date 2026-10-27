@@ -292,7 +292,7 @@ public sealed partial class MainWindow : Window
                 : $"已选中 {Selected.Name} · {ToolName(ViewportHost)}";
 
         StatusText.Text = $"{mode} · {Document.Objects.Count} 个对象 · {Document.TriangleCount} 三角形";
-        Title = Document.IsDirty ? "星空 — 未保存*" : "星空";
+        Title = Document.IsDirty ? "星梦 — 未保存*" : "星梦";
     }
 
     private static string ToolName(ViewportControl viewport)
@@ -668,7 +668,7 @@ public sealed partial class MainWindow : Window
             var picker = new Windows.Storage.Pickers.FileSavePicker();
             WinRT.Interop.InitializeWithWindow.Initialize(
                 picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
-            picker.FileTypeChoices.Add("星空场景", new List<string> { ".skyscene" });
+            picker.FileTypeChoices.Add("星梦场景", new List<string> { ".skyscene" });
             picker.SuggestedFileName = "场景";
 
             var file = await picker.PickSaveFileAsync();
@@ -705,7 +705,7 @@ public sealed partial class MainWindow : Window
         WinRT.Interop.InitializeWithWindow.Initialize(
             picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
         picker.FileTypeChoices.Add("FBX", new List<string> { ".fbx" });
-        picker.SuggestedFileName = "星空场景";
+        picker.SuggestedFileName = "星梦场景";
 
         var file = await picker.PickSaveFileAsync();
         if (file is null)

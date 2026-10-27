@@ -1,6 +1,8 @@
-﻿# 星空（StarrySky）
+﻿# 星梦（StarrySky）
 
-Windows 桌面 3D 建模工具。界面参考 Blender 的分区，操作参考 Maya 的习惯，3D 视口用自写的 Direct3D 11 渲染器嵌在 WinUI 3 的 `SwapChainPanel` 里。
+Windows 桌面 3D 建模工具，界面参考 Blender 的分区，操作参考 Maya 的习惯，3D 视口用自写的 Direct3D 11 渲染器嵌在 WinUI 3 的 `SwapChainPanel` 里。
+
+> 应用显示名是**星梦**，代码里的命名空间与程序集名保留 `StarrySky`，场景文件扩展名也用 `.skyscene`。
 
 ## 现在能做什么
 

@@ -3,7 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:StarrySky.App"
-    Title="星空">
+    Title="星梦">
 
     <Grid>
         <Grid.KeyboardAccelerators>
@@ -58,7 +58,7 @@
                 <MenuFlyoutItem Text="全览" Click="OnFrameAll" />
             </MenuBarItem>
             <MenuBarItem Title="帮助">
-                <MenuFlyoutItem Text="关于星空" />
+                <MenuFlyoutItem Text="关于星梦" />
             </MenuBarItem>
         </MenuBar>
 
